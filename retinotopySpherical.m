@@ -1,20 +1,29 @@
 %% User settings:
-isDebug = true;
+isDebug = false;
 settings = struct;
-settings.saveDir = 'F:\';
+settings.saveDir = 'D:\Data\Matthias';
 settings.expName = char(inputdlg('Experiment Name? '));
-settings.nRepeats = 2; % How often each direction is repeated, i.e. there will be 4 times as many sweeps.
-settings.barWidth_deg = 5;
-settings.barSpeed_dps = 30;
-settings.checkerBlink_hz = 6;
-settings.minDistEyeToScreen_mm = 100;
-settings.screenOri_xyPix = [-622, 329];
+settings.nRepeats = 20; % How often each direction is repeated, i.e. there will be 4 times as many sweeps.
+settings.barWidth_deg = 10; % Marshel uses 20
+settings.barSpeed_dps = 9; % Marshel uses 8.5-9.5 dps
+settings.checkerBlink_hz = 6; % Marshel uses 6 Hz
+settings.minDistEyeToScreen_mm = 130;
+settings.screenOri_xyPix = [-68, 19];
 settings.pixelReductionFactor = 5; % How much the texture is downsampled...affects frame rate.
+settings.fps = 60; % Target display/acquisition rate. Max is 120 Hz (monitor refresh)
+
+% Empirical duration for Marshel settings:
+expDur = settings.nRepeats * 2 * (11.6182 + 14.6516);
+button = questdlg(sprintf('Experiment will take about %1.1f minutes. Click YES to start.', ...
+    expDur/60));
+if ~strcmp(button, 'Yes')
+    return
+end
 
 %% Run this to find the screen origin:
 if false
     screenId = 2; %#ok<UNRCH>
-    res = Screen('Resolution', settings.screen.id);
+    res = Screen('Resolution', screenId);
     while KbCheck 
     end
 
@@ -74,13 +83,22 @@ if isDebug
     oldPriority = Priority;
 else
     oldPriority = Priority(1);
+    blackOutWin = Screen('OpenWindow', 1, 0);
 end
 
-screen.win = PsychImaging('OpenWindow',  screen.id, [], [], [], [], [], screen.isAntiAliasing);
+Screen('Preference', 'VisualDebugLevel', 1); % Suppress white intro screen.
+screen.win = PsychImaging('OpenWindow',  screen.id, 0, [], [], [], [], screen.isAntiAliasing);
 screen.fullRect = Screen('Rect', screen.win);
 
 %% Display and Acquisition Loop
-timeFirstFrame_s = Screen('Flip', screen.win, 0);
+
+%Draw first streen to ensure functions are all loaded:
+texMat = makeSphericalBar(tex, settings, 0);
+texPtr = Screen('MakeTexture', screen.win, texMat);
+Screen('DrawTexture', screen.win, texPtr, [], screen.fullRect);
+Screen('Flip', screen.win, 0);
+Screen('Close', texPtr)
+        
 isExit = 0;
 
 while KbCheck
@@ -101,8 +119,9 @@ for iCond = 1:4
     % Prepare texture and timers:
     tex = prepareSphericalBarTex(screen, settings, frame.next.barDirection_deg);
     repeatDuration_s = range(tex.altLimits_deg)/settings.barSpeed_dps;
-    
+    disp(repeatDuration_s)
     if frame.next.frameId == 0
+        timeFirstFrame_s = Screen('Flip', screen.win, 0);
         t0 = timeFirstFrame_s;
     else
         t0 = frame.current.flipTime_s;
@@ -119,7 +138,8 @@ for iCond = 1:4
         
         % Advance frame:
         frame.next.frameId = frame.current.frameId + 1;
-        frame.next.flipTime_s = Screen('Flip', screen.win);
+        frame.next.flipTime_s = Screen('Flip', screen.win, ...
+            frame.current.flipTime_s+(0.75/settings.fps));
         timeInCondition_s = frame.next.flipTime_s - t0;
         advance(frame);
         
@@ -163,3 +183,4 @@ if ~isDebug
 end
 
 
+warning('To do: save mfile')

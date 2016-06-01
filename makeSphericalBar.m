@@ -10,7 +10,6 @@ texMat = cos(texMat);
 texMat = (texMat>0) .* (tex.checkerMask*sign(cos(time_s*settings.checkerBlink_hz*2*pi))>0);
 
 % Scale and reshape:
-texMat = (texMat+1) / 2;
 texMat = texMat * 255;
 texMat = reshape(texMat, tex.texMatSize);
 
