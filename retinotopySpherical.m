@@ -34,7 +34,7 @@ if false
     end
 end
 
-%% Initialize DAQ and Data Logging
+%% Initialize DAQ and data logging
 if ~isDebug
     camControl = daq.createSession('ni');
     addDigitalChannel(camControl,'Dev1','Port0/Line0:2','OutputOnly');
@@ -57,18 +57,6 @@ screen.pixPerMm = hypot(screen.width, screen.height)/(25.4 * screen.diagInch);
 screen.isAntiAliasing = 0;
 
 %% Initialize sync data storage:
-retSynch = struct;
-retSynch.nFrame = uint32(0);
-retSynch.nTrial = uint16(0);
-retSynch.trialOnsets = uint32(0);
-retSynch.trialConditions = uint16(0);
-retSynch.barLocation = pi*1e6;
-retSynch.isTrialDone = true;
-retSynch.barVerticalTrial = true;
-retSynch.posDirectionTrial = true;
-% retSynch.redLED = settings.redLED;
-% retSynch.blueLED = settings.blueLED;
-
 frameStruct = struct;
 frameStruct.frameId = 0;
 frameStruct.flipTime_s = 0;
@@ -169,8 +157,10 @@ if ~exist(settings.saveDir, 'dir')
     mkdir(settings.saveDir);
 end
 saveFileName = fullfile(settings.saveDir, ...
-    [datestr(now, 'yyyy-mm-dd_HH-MM-SS'), '_', settings.expName]);
-save(saveFileName, 'settings', 'screen', 'frame')
+    [datestr(now, 'yyyy-mm-dd_HH-MM-SS'), '_somatotopy_', settings.expName]);
+
+mfile = fileread(which(mfilename));
+save(saveFileName, 'settings', 'screen', 'frame', 'mfile')
 fprintf('Retinotopy data saved at %s.\n', saveFileName)
 
 Priority(oldPriority);
