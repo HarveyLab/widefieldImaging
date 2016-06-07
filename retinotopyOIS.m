@@ -4,12 +4,12 @@ expName = input('Experiment Name? ','s');
 thisFileName = fullfile(dataDir,expName);
 %% Parameters
 
-settings.nTrials = 8;
+settings.nTrials = 15;
 settings.barWidth = 5; % Degrees
-settings.barSpeed = 10; % Degrees per second
+settings.barSpeed = 8; % Degrees per second
 settings.checkerWidth = 5; % Degrees
 settings.checkerHeight = 5; % Degrees
-settings.checkerBlinkRate = 20; % Camera Frames per Phase Shift
+settings.checkerBlinkRate = 10; % Camera Frames per Phase Shift
 settings.flipMod = 2; % (monitor refresh rate) / (camera imaging rate and/or display update rate)
 settings.redLED = 1;
 settings.blueLED = 1;

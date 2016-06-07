@@ -1,14 +1,17 @@
+function somatotopyVibrationMotors
 %% User settings:
-isDebug = true;
+isDebug = false;
 settings = struct;
 settings.saveDir = 'D:\Data\Matthias';
 settings.expName = char(inputdlg('Experiment Name? '));
-settings.nRepeats = 2; % How often the whole set of conditions is repreated.
-settings.onTime_s = 1; % How long each motor is on
-settings.offTime_s = 2; % Off-time in betwee stimuli
+settings.nRepeats = 30; % How often the whole set of conditions is repreated.
+settings.onTime_s = 2; % How long each motor is on
+settings.offTime_s = 8; % Off-time in betwee stimuli
 settings.motorOrder = 1:6;
-settings.motorPositionName = {'right hindpaw', '', '', '', '', ''};
-settings.fps = 60; % Target display/acquisition rate. Max is 120 Hz (monitor refresh)
+settings.motorPositionName = {'left forepaw', ...
+    'right forepaw', 'left hindpaw', 'right hindpaw', ...
+    'neck', 'back'};
+settings.fps = 60; % jmTarget display/acquisition rate. Max is 120 Hz (monitor refresh)
 
 % Show estimated experiment duration:
 expDur = settings.nRepeats * (settings.onTime_s + settings.offTime_s) * numel(settings.motorOrder);
@@ -25,7 +28,7 @@ if ~isDebug
 end
 
 %% Initialize Teensy:
-arduinoSerialObject = serial('COM6', 'BaudRate', 9600);
+arduinoSerialObject = serial('COM3', 'BaudRate', 9600);
 if isDebug
     global isMonitorArduino %#ok<UNRCH,TLEV,NUSED>
     isMonitorArduino = 0;
@@ -49,43 +52,51 @@ end
 
 nCond = numel(settings.motorOrder);
 ticFrame = tic;
+ticSession = tic;
 
 for iRep = 1:settings.nRepeats
     for iCond = settings.motorOrder
         ticCond = tic;
-        
-        % Switch motor on:
-        fwrite(arduinoSerialObject, iCond, 'uint8')
         fprintf('Repeat %d/%d, conditon %d/%d.\n', ...
             iRep, settings.nRepeats, iCond, nCond);
         
+        % Switch motor on:
+        frame.next.motorState = iCond;
+        fwrite(arduinoSerialObject, iCond, 'uint8')
+        
         % Record stimulus response:
         while ~isUserAbort && toc(ticCond) < settings.onTime_s
-            while toc(ticFrame) < (1/settings.fps)
-                % Wait until it is time to acquire the frame.
-            end
-            if ~isDebug
-                outputSingleScan(camControl,[1 1 1]) % Trigger
-                outputSingleScan(camControl,[1 1 0]) % Reset
-            end
-            isUserAbort = KbCheck;
+            flipFrame;
         end
         
         % Switch motor off:
+        frame.next.motorState = 0;
         fwrite(arduinoSerialObject, 0, 'uint8')
         
         % Record inter-stimulus interval:
-        while ~isUserAbort && toc(ticCond) < settings.offTime_s
-            while toc(ticFrame) < (1/settings.fps)
-                % Wait until it is time to acquire the frame.
-            end
-            if ~isDebug
-                outputSingleScan(camControl,[1 1 1]) % Trigger
-                outputSingleScan(camControl,[1 1 0]) % Reset
-            end
-            isUserAbort = KbCheck;
+        while ~isUserAbort && toc(ticCond) < (settings.offTime_s + settings.onTime_s)
+            flipFrame;
         end
     end
+end
+
+function flipFrame
+    frameLagCorrection = 0.0017; % Time it takes for the singleScan to be executed;
+    
+    frame.next.frameId = frame.current.frameId + 1;
+    
+    while toc(ticFrame) < (1/settings.fps)-frameLagCorrection
+        % Wait until it is time to acquire the frame.
+    end
+    if ~isDebug
+        outputSingleScan(camControl,[1 1 1]) % Trigger
+        ticFrame = tic;
+        frame.next.flipTime_s = toc(ticSession);
+        outputSingleScan(camControl,[1 1 0]) % Reset
+    end
+    
+    advance(frame);
+    isUserAbort = KbCheck;
 end
 
 
@@ -101,6 +112,10 @@ mfile = fileread(which(mfilename));
 save(saveFileName, 'settings', 'frame', 'mfile')
 fprintf('Somatotopy data saved at %s.\n', saveFileName)
 
+assignin('base', 'settings', settings);
+assignin('base', 'frame', frame);
+assignin('base', 'mfile', mfile);
+
 if ~isDebug
     % Close DAQ:
     outputSingleScan(camControl, [0 0 0])
@@ -109,3 +124,5 @@ end
 
 % Close Arduino:
 fclose(arduinoSerialObject);
+
+end
