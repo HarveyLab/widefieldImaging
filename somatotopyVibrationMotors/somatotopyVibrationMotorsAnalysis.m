@@ -1,8 +1,8 @@
 function avgMov = somatotopyVibrationMotorsAnalysis
 
 %% Settings:
-movFolder = 'D:\Data\Matthias\MM101_retino';
-datFile = 'D:\Data\Matthias\2016-06-07_19-47-44_somatotopy_MM101_somato.mat';
+movFolder = 'D:\Data\Matthias\MM102_somato';
+datFile = 'D:\Data\Matthias\2016-06-08_18-41-10_somatotopy_MM102_somato.mat';
 chunkDur_s = 0.5;
 
 %% Get movie metadata:
@@ -20,7 +20,7 @@ nFramesInSyncStruct = numel(dat.frame.past.frameId);
 [~, order] = sort(fileNameNumber);
 lst = lst(order);
 % lst = lst(1:nFramesInSyncStruct);
-lst = lst((end-nFramesInSyncStruct+1):end); % Fix for accidentally recording retino and somato in a row.
+lst = lst(1:nFramesInSyncStruct); % Fix for accidentally recording retino and somato in a row.
 
 img = imread(fullfile(movFolder, lst(1).name));
 dat.mov.height = size(img, 1);

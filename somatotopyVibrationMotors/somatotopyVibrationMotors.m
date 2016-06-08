@@ -5,12 +5,12 @@ settings = struct;
 settings.saveDir = 'D:\Data\Matthias';
 settings.expName = char(inputdlg('Experiment Name? '));
 % 20 Reps was OK but go higher if there's time
-settings.nRepeats = 20; % How often the whole set of conditions is repreated.
+settings.nRepeats = 40; % How often the whole set of conditions is repreated.
 settings.onTime_s = 1; % How long each motor is on
-settings.offTime_s = 9; % Off-time in betwee stimuli
-settings.motorOrder = 1:4;
-settings.motorPositionName = {'right forepaw', ...
-    'right hindpaw', 'right flank', 'neck'};
+settings.offTime_s = 4; % Off-time in betwee stimuli
+settings.motorOrder = 1:5;
+settings.motorPositionName = {'snout', ...
+    'upper flank', 'lower flank', 'hindpaw', 'neck'};
 settings.fps = 60; % jmTarget display/acquisition rate. Max is 120 Hz (monitor refresh)
 
 % Show estimated experiment duration:
