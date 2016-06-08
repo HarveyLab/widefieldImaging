@@ -4,13 +4,13 @@ isDebug = false;
 settings = struct;
 settings.saveDir = 'D:\Data\Matthias';
 settings.expName = char(inputdlg('Experiment Name? '));
-settings.nRepeats = 30; % How often the whole set of conditions is repreated.
-settings.onTime_s = 2; % How long each motor is on
-settings.offTime_s = 8; % Off-time in betwee stimuli
-settings.motorOrder = 1:6;
-settings.motorPositionName = {'left forepaw', ...
-    'right forepaw', 'left hindpaw', 'right hindpaw', ...
-    'neck', 'back'};
+% 20 Reps was OK but go higher if there's time
+settings.nRepeats = 20; % How often the whole set of conditions is repreated.
+settings.onTime_s = 1; % How long each motor is on
+settings.offTime_s = 9; % Off-time in betwee stimuli
+settings.motorOrder = 1:4;
+settings.motorPositionName = {'right forepaw', ...
+    'right hindpaw', 'right flank', 'neck'};
 settings.fps = 60; % jmTarget display/acquisition rate. Max is 120 Hz (monitor refresh)
 
 % Show estimated experiment duration:

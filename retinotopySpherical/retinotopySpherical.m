@@ -3,12 +3,13 @@ isDebug = false;
 settings = struct;
 settings.saveDir = 'D:\Data\Matthias';
 settings.expName = char(inputdlg('Experiment Name? '));
-settings.nRepeats = 20; % How often each direction is repeated, i.e. there will be 4 times as many sweeps.
+% 10 reps was not enough with transgenic. Try 20.
+settings.nRepeats = 10; % How often each direction is repeated, i.e. there will be 4 times as many sweeps.
 settings.barWidth_deg = 10; % Marshel uses 20
 settings.barSpeed_dps = 9; % Marshel uses 8.5-9.5 dps
 settings.checkerBlink_hz = 6; % Marshel uses 6 Hz
 settings.minDistEyeToScreen_mm = 130;
-settings.screenOri_xyPix = [-68, 19];
+settings.screenOri_xyPix = [-34, 45];
 settings.pixelReductionFactor = 5; % How much the texture is downsampled...affects frame rate.
 settings.fps = 60; % Target display/acquisition rate. Max is 120 Hz (monitor refresh)
 
@@ -81,6 +82,7 @@ screen.fullRect = Screen('Rect', screen.win);
 %% Display and Acquisition Loop
 
 %Draw first streen to ensure functions are all loaded:
+tex = prepareSphericalBarTex(screen, settings, frame.next.barDirection_deg);
 texMat = makeSphericalBar(tex, settings, 0);
 texPtr = Screen('MakeTexture', screen.win, texMat);
 Screen('DrawTexture', screen.win, texPtr, [], screen.fullRect);
