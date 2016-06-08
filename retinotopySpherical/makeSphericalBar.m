@@ -7,7 +7,8 @@ texMat(abs(texMat) > pi) = nan; % Setting to nan is faster than pi because cos()
 texMat = cos(texMat);
 
 % Mask with checker:
-texMat = (texMat>0) .* (tex.checkerMask*sign(cos(time_s*settings.checkerBlink_hz*2*pi))>0);
+texMat = (texMat>0) .* (tex.checkerMask*sign(cos(time_s*settings.checkerBlink_hz*2*pi))>0) ...
+    + ~(texMat>0)*0.5;
 
 % Scale and reshape:
 texMat = texMat * 255;
