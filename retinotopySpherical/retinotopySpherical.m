@@ -1,3 +1,7 @@
+
+
+error('Todo: try wide open aperture and lower gain')
+
 %% User settings:
 isDebug = false;
 settings = struct;
