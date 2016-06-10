@@ -1,16 +1,29 @@
 function avgMov = somatotopyVibrationMotorsAnalysis
 
 %% Settings:
-movFolder = 'D:\Data\Matthias\MM102_somato';
-datFile = 'D:\Data\Matthias\2016-06-08_18-41-10_somatotopy_MM102_somato.mat';
+base = '\\research.files.med.harvard.edu\Neurobio\HarveyLab\Matthias\data\imaging\widefield';
+movFolder = fullfile(base, 'MM102_somato');
+datFile = fullfile(base, '2016-06-08_18-41-10_somatotopy_MM102_somato.mat');
 chunkDur_s = 0.5;
 
 %% Get movie metadata:
 dat = load(datFile);
 
 % Extract numbers from file name and sort accordingly:
-lst = dir(fullfile(movFolder, '*.tiff'));
-nFiles = numel(lst);
+p = fullfile(movFolder, '*.tiff');
+list = sort(...
+         strsplit(...
+         regexprep(evalc('dir(p)'), '\s{2,}', '\n'), ...
+         '\n')); % Sort is necessary because evalc is not sorted alphabetically.
+list = list(3:end); % Remove . and ..
+% lst = dir(fullfile(movFolder, '*.tiff'));
+
+nFiles = numel(list);
+lst = struct;
+for i = 1:nFiles
+    lst(i).name = list{i};
+end
+
 fileNameNumber = zeros(nFiles, 1);
 for iFile = 1:nFiles
     str = regexp(lst(iFile).name, '(?<=_)()\d{4,5}(?=\.)', 'match', 'once');
@@ -54,9 +67,27 @@ end
 nChunks = max(chunkOfFrame);
 avgMov = zeros(dat.mov.height, dat.mov.width, nChunks);
 nInChunk = accumarray(chunkOfFrame', ones(size(chunkOfFrame)));
+
+% Motioncorrect on moving average reference:
+ref = double(imread(fullfile(movFolder, lst(1).name)));
+ref(ref<1000) = ref(ref<1000) + 2^16; % Fix overflow
+halflife_frames = 1000;
+alpha = exp(log(0.5)/halflife_frames);
+dat.mov.shifts.x = zeros(nFramesInSyncStruct, 1);
+dat.mov.shifts.y = zeros(nFramesInSyncStruct, 1);
+
 for iFrame = 1:nFramesInSyncStruct
+    % Load frame:
     imgHere = double(imread(fullfile(movFolder, lst(iFrame).name)));
     imgHere(imgHere<1000) = imgHere(imgHere<1000) + 2^16; % Fix overflow
+    
+    % Correct motion:
+    [imgHere, dat.mov.shifts.x(iFrame), dat.mov.shifts.y(iFrame)] = ...
+        correct_translation_singleframe(imgHere, ref);
+    
+    % Update reference:
+    ref = alpha * ref + (1-alpha) * imgHere;
+    
     iChunkHere = chunkOfFrame(iFrame);
     avgMov(:,:,iChunkHere) = ...
         avgMov(:,:,iChunkHere) + imgHere/nInChunk(iChunkHere);    
@@ -64,6 +95,10 @@ for iFrame = 1:nFramesInSyncStruct
         iFrame, nFramesInSyncStruct);
 end
 
+dat.mov.ref = ref;
+
 %% Save:
 [p, f, ~] = fileparts(datFile);
-tiffWrite(avgMov, [f, '_avgMov'], p);
+f = sprintf('%s_avgMov%s', f, datestr(now, 'yymmdd'));
+tiffWrite(avgMov, f, p);
+save(fullfile(p, f), '-struct', 'dat');

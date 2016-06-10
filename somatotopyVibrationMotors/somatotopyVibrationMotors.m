@@ -106,7 +106,7 @@ if ~exist(settings.saveDir, 'dir')
     mkdir(settings.saveDir);
 end
 saveFileName = fullfile(settings.saveDir, ...
-    [datestr(now, 'yyyy-mm-dd_HH-MM-SS'), '_somatotopy_', settings.expName]);
+    [datestr(now, 'yyyymmdd_HHMMSS'), '_somatotopy_', settings.expName]);
 
 mfile = fileread(which(mfilename));
 save(saveFileName, 'settings', 'frame', 'mfile')

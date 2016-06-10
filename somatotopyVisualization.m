@@ -1,12 +1,23 @@
 %% Load averaged movie:
-p = '\\intrinsicScope\D\Data\Matthias';
-mov = tiffRead(fullfile(p, '2016-06-07_19-47-44_somatotopy_MM101_somato_avgMov.tif'));
+% p = '\\intrinsicScope\D\Data\Matthias';
+p = '\\research.files.med.harvard.edu\Neurobio\HarveyLab\Matthias\data\imaging\widefield';
+% p = 'T:\';
+mov = tiffRead(fullfile(p, '2016-06-08_18-41-10_somatotopy_MM102_somato_avgMov160609.tif'));
+load();
 [height, width, nFrames] = size(mov);
 
+movDetrend = mov;
+for i = 1:nFrames
+    i
+%     movDetrend(:,:,i) = imgaussfilt(movDetrend(:,:,i), 5);
+end
+mn = mean(mean(movDetrend, 1), 2);
+movDetrend = bsxfun(@rdivide, bsxfun(@minus, movDetrend, mn), mn);
+
 %% Settings:
-nChunksOn = 2;
-nChunksOff = 18;
-nCond = 4;
+nChunksOn = settings.onTime_s*2;
+nChunksOff = settings.offTime_s*2;
+nCond = numel(settings.motorOrder);
 nChunksPerTrial = nChunksOn + nChunksOff;
 
 %% Get mean trace for ROI:
@@ -25,17 +36,17 @@ plot(onFrames, trace(onFrames), '.r')
 % Select which chunks (out of nChunksOn+Off) go torwards the stim and blank
 % averages:
 % stimChunks = 1:2;
-stimChunks = 3; % For MM101, there is a weird vessel artefact in frames 1:2 of the flank stim. Frame 3 looks better.
-blankChunks = (4:5) + 4;
+stimChunks = 1:2; % For MM101, there is a weird vessel artefact in frames 1:2 of the flank stim. Frame 3 looks better.
+blankChunks = 3:10;
 
 % Subtract mean of blank for each chunk:
 movSub = zeros(height, width, nFrames/nChunksPerTrial);
 for i = 0:nChunksPerTrial:(nFrames-nChunksPerTrial)
     % Average the chunks containing the response:
-    stim = mean(mov(:,:,stimChunks+i), 3);
+    stim = mean(movDetrend(:,:,stimChunks+i), 3);
     
     % Average the chunks used as the baseline:
-    baseline = mean(mov(:,:,blankChunks+i), 3);
+    baseline = mean(movDetrend(:,:,blankChunks+i), 3);
     
     % Calculate dR/R:
     movSub(:,:,(i+nChunksPerTrial)/nChunksPerTrial) = (stim-baseline) ./ baseline;
@@ -53,6 +64,12 @@ ijPlay(movAvg)
 figure(3)
 imagesc(movAvg(:,:,5))
 colormap(jet)
+
+%% Show activation relative to mean:
+movRel = movAvg(:,:,[1,  4, 5]);
+movRel = bsxfun(@rdivide, movRel, mean(mean(movRel, 1), 2));
+movRel = bsxfun(@minus, movRel, mean(movRel, 3));
+ijPlay(movRel)
 
 %% Show differences between two conditions:
 hindlimb = movAvg(:,:,3) - movAvg(:,:,5);

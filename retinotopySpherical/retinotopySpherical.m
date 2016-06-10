@@ -164,7 +164,7 @@ if ~exist(settings.saveDir, 'dir')
     mkdir(settings.saveDir);
 end
 saveFileName = fullfile(settings.saveDir, ...
-    [datestr(now, 'yyyy-mm-dd_HH-MM-SS'), '_retinotopy_', settings.expName]);
+    [datestr(now, 'yyyymmdd_HHMMSS'), '_retinotopy_', settings.expName]);
 
 mfile = fileread(which(mfilename));
 save(saveFileName, 'settings', 'screen', 'frame', 'mfile')

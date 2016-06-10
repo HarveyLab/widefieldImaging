@@ -1,7 +1,8 @@
 %% Load data:
-p = '\\intrinsicScope\D\Data\Matthias';
-load(fullfile(p, '2016-06-07_19-24-25_somatotopy_MM101_retino_gain15_rgb100_results.mat'));
-meta = load(fullfile(p, '2016-06-07_19-24-25_somatotopy_MM101_retino_gain15_rgb100.mat'));
+% p = '\\intrinsicScope\D\Data\Matthias';
+p = 'T:\';
+load(fullfile(p, '2016-06-08_18-22-58_retinototopy_MM102_retino_results'));
+meta = load(fullfile(p, '2016-06-08_18-22-58_retinototopy_MM102_retino.mat'));
 
 %% Get response phase:
 nCond = numel(retino);
@@ -11,16 +12,16 @@ for i = 1:nCond
     retino(i).tuningCorr = retino(i).tuning;
 end
 
-for i = 1:nCond
-    for ii = 1:size(retino(i).tuning, 3)
-        % Normalize by each frame's brightness:
-        retino(i).tuningCorr(:,:,ii) = retino(i).tuningCorr(:,:,ii) ...
-            ./ mean(col(retino(i).tuningCorr(:,:,ii)));
-        
-        % Apply smoothing:
-%         retino(i).tuningCorr(:,:,ii) = imgaussfilt(retino(i).tuningCorr(:,:,ii), 10);
-    end
-end
+% for i = 1:nCond
+%     for ii = 1:size(retino(i).tuning, 3)
+%         % Normalize by each frame's brightness:
+%         retino(i).tuningCorr(:,:,ii) = retino(i).tuningCorr(:,:,ii) ...
+%             ./ mean(col(retino(i).tuningCorr(:,:,ii)));
+%         
+%         % Apply smoothing:
+% %         retino(i).tuningCorr(:,:,ii) = imgaussfilt(retino(i).tuningCorr(:,:,ii), 10);
+%     end
+% end
 
 for i = 1:nCond
     % Convert the blank frames to nan to exclude from averaging:
@@ -47,7 +48,7 @@ for i = 1:2
 end
 
 %% Plot
-isBackwards = 1;
+isBackwards = 0;
 
 figure(1)
 clf
