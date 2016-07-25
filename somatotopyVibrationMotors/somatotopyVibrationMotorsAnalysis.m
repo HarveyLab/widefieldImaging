@@ -32,8 +32,7 @@ end
 nFramesInSyncStruct = numel(dat.frame.past.frameId);
 [~, order] = sort(fileNameNumber);
 lst = lst(order);
-% lst = lst(1:nFramesInSyncStruct);
-lst = lst(1:nFramesInSyncStruct); % Fix for accidentally recording retino and somato in a row.
+lst = lst(1:nFramesInSyncStruct);
 
 img = imread(fullfile(movFolder, lst(1).name));
 dat.mov.height = size(img, 1);
