@@ -1,6 +1,7 @@
-
-
-error('Todo: try wide open aperture and lower gain')
+error('Cover left eye!')
+error('Ensure that right eye can only see screen, no reflections')
+error('Interleave all conditions?')
+error('Keep iso at 0.5% like marshel')
 
 %% User settings:
 isDebug = false;
@@ -8,12 +9,12 @@ settings = struct;
 settings.saveDir = 'D:\Data\Matthias';
 settings.expName = char(inputdlg('Experiment Name? '));
 % 10 reps was not enough with transgenic. Try 20.
-settings.nRepeats = 20; % How often each direction is repeated, i.e. there will be 4 times as many sweeps.
-settings.barWidth_deg = 10; % Marshel uses 20
+settings.nRepeats = 1; % How often each direction is repeated, i.e. there will be 4 times as many sweeps. Garrett uses 6-10 times 10, so up to 100 sweeps!
+settings.barWidth_deg = 20; % Marshel uses 20
 settings.barSpeed_dps = 9; % Marshel uses 8.5-9.5 dps
 settings.checkerBlink_hz = 6; % Marshel uses 6 Hz
 settings.minDistEyeToScreen_mm = 130;
-settings.screenOri_xyPix = [-34, 45];
+settings.screenOri_xyPix = [18, 2];
 settings.pixelReductionFactor = 5; % How much the texture is downsampled...affects frame rate.
 settings.fps = 60; % Target display/acquisition rate. Max is 120 Hz (monitor refresh)
 
@@ -80,20 +81,26 @@ else
 end
 
 Screen('Preference', 'VisualDebugLevel', 1); % Suppress white intro screen.
-screen.win = PsychImaging('OpenWindow',  screen.id, 127, [], [], [], [], screen.isAntiAliasing);
+screen.win = PsychImaging('OpenWindow',  screen.id, 0, [], [], [], [], screen.isAntiAliasing);
 screen.fullRect = Screen('Rect', screen.win);
+% Set alpha blending settings (for fading to black at the end of a trial).
+% GL_colormask = [0 1 1 0]; % RGBA mask to exclude red and green light.
+% Screen('BlendFunction', screen.win, GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_colormask);
+Screen('FillRect', screen.win, [0 0 127])
+Screen('Flip', screen.win);
 pause(5); % For luminance adaptation.
 
 %% Display and Acquisition Loop
 
 %Draw first streen to ensure functions are all loaded:
 tex = prepareSphericalBarTex(screen, settings, frame.next.barDirection_deg);
-texMat = makeSphericalBar(tex, settings, 0);
+texMat = makeSphericalBar(tex, settings, 0, frame.next.barDirection_deg);
+texMat = repmat(texMat, 1, 1, 3);
+texMat(:,:,1:2) = 0;
 texPtr = Screen('MakeTexture', screen.win, texMat);
 Screen('DrawTexture', screen.win, texPtr, [], screen.fullRect);
-Screen('Flip', screen.win, 127);
+Screen('Flip', screen.win);
 Screen('Close', texPtr)
-        
 isExit = 0;
 
 while KbCheck
@@ -127,7 +134,9 @@ for iCond = 1:4
         
         % Draw frame:
         [texMat, frame.next.barPosition_deg] = ...
-            makeSphericalBar(tex, settings, timeInCondition_s);
+            makeSphericalBar(tex, settings, timeInCondition_s, frame.next.barDirection_deg);
+        texMat = repmat(texMat, 1, 1, 3);
+        texMat(:,:,1:2) = 0;
         texPtr = Screen('MakeTexture', screen.win, texMat);
         Screen('DrawTexture', screen.win, texPtr, [], screen.fullRect);
         

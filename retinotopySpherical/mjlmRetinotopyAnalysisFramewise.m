@@ -3,8 +3,8 @@ function results = mjlmRetinotopyAnalysisFramewise
 %% Settings:
 % base = '\\research.files.med.harvard.edu\Neurobio\HarveyLab\Matthias\data\imaging\widefield';
 base = 'D:\Data\Matthias';
-movFolder = fullfile(base, 'MM102_retino');
-datFile = fullfile(base, '2016-06-08_18-22-58_retinototopy_MM102_retino.mat');
+movFolder = fullfile(base, 'lightTightTest');
+datFile = fullfile(base, '20160719_133126_retinotopy_lightTightTest.mat');
 isSubtractBaseline = false;
 
 %% Get movie metadata:
