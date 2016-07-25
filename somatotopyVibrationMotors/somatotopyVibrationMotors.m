@@ -16,8 +16,10 @@ settings.expName = char(inputdlg('Experiment Name? '));
 settings.nRepeats = 240; % How often the whole set of conditions is repreated.
 settings.onTime_s = 0.4; % How long each motor is on
 settings.offTime_s = 0.4; % Off-time in betwee stimuli
+
+% Audio must come at s the last "motor" and must be called "audio"
 settings.motorPositionName = {'snout', ...
-    'flank', 'hindpaw', 'neck'};
+    'flank', 'hindpaw', 'neck', 'audio'};
 settings.motorSequence = getMinimumRepetitionSequence(...
     numel(settings.motorPositionName), ...
     numel(settings.motorPositionName)*settings.nRepeats);
@@ -46,6 +48,12 @@ if isDebug
     arduinoSerialObject.BytesAvailableFcn = @cbArduinoDataAvailable;
 end
 fopen(arduinoSerialObject);
+
+%% Initialize sound:
+soundFile = load('ripple_sound.mat');
+soundDur = settings.onTime_s;
+audioObject = audioplayer(soundFile.ripple(1:round(soundFile.Fs*soundDur)), ...
+    soundFile.Fs, 16);
 
 %% Initialize sync data storage:
 frameStruct = struct;
@@ -76,18 +84,26 @@ for iRep = 1:settings.nRepeats
             iRep, settings.nRepeats, condHere, ...
             settings.motorPositionName{condHere});
         
-        % Switch motor on:
+        % Switch stimulus on:
         frame.next.motorState = condHere;
-        fwrite(arduinoSerialObject, condHere, 'uint8')
+        isAudio = condHere==nCond && strcmp(settings.motorPositionName{condHere}, 'audio');
+        
+        if isAudio
+            play(audioObject)
+        else
+            fwrite(arduinoSerialObject, condHere, 'uint8')
+        end
         
         % Record stimulus response:
         while ~isUserAbort && toc(ticCond) < settings.onTime_s
             flipFrame;
         end
         
-        % Switch motor off:
+        % Switch stimulus off:
         frame.next.motorState = 0;
-        fwrite(arduinoSerialObject, 0, 'uint8')
+        if ~isAudio
+            fwrite(arduinoSerialObject, 0, 'uint8')
+        end
         
         % Record inter-stimulus interval:
         while ~isUserAbort && toc(ticCond) < (settings.offTime_s + settings.onTime_s)
