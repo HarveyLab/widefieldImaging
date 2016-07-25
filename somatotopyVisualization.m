@@ -1,23 +1,24 @@
 %% Load averaged movie:
 % p = '\\intrinsicScope\D\Data\Matthias';
-p = '\\research.files.med.harvard.edu\Neurobio\HarveyLab\Matthias\data\imaging\widefield';
-% p = 'T:\';
-mov = tiffRead(fullfile(p, '2016-06-08_18-41-10_somatotopy_MM102_somato_avgMov160609.tif'));
-load();
+% p = '\\research.files.med.harvard.edu\Neurobio\HarveyLab\Matthias\data\imaging\widefield';
+p = 'T:\';
+mov = tiffRead(fullfile(p, '20160718_184127_somatotopy_MM102_160718_avgMov160719.tif'));
+% mov = tiffRead(fullfile('E:\', '20160718_184127_somatotopy_MM102_160718_avgMov160719.tif')); % No mtion corr.
+meta = load(fullfile(p, '20160718_184127_somatotopy_MM102_160718.mat'));
 [height, width, nFrames] = size(mov);
 
 movDetrend = mov;
-for i = 1:nFrames
-    i
+% for i = 1:nFrames
+%     i
 %     movDetrend(:,:,i) = imgaussfilt(movDetrend(:,:,i), 5);
-end
-mn = mean(mean(movDetrend, 1), 2);
-movDetrend = bsxfun(@rdivide, bsxfun(@minus, movDetrend, mn), mn);
+% end
+% mn = mean(mean(movDetrend, 1), 2);
+% movDetrend = bsxfun(@rdivide, bsxfun(@minus, movDetrend, mn), mn);
 
 %% Settings:
-nChunksOn = settings.onTime_s*2;
-nChunksOff = settings.offTime_s*2;
-nCond = numel(settings.motorOrder);
+nChunksOn = meta.settings.onTime_s/0.2;
+nChunksOff = meta.settings.offTime_s/0.2;
+nCond = numel(meta.settings.motorPositionName);
 nChunksPerTrial = nChunksOn + nChunksOff;
 
 %% Get mean trace for ROI:
@@ -32,11 +33,29 @@ onFrames = 1:(nChunksOn+nChunksOff):numel(trace);
 onFrames = cat(2, onFrames, onFrames+1);
 plot(onFrames, trace(onFrames), '.r')
 
+%% For each condition, average all repeats:
+avgMov = zeros(height, width, (nChunksOn+nChunksOff)*nCond);
+chunkId = repmat(1:(nChunksOn+nChunksOff), 1, meta.settings.nRepeats*nCond);
+condId = repelem(meta.settings.motorSequence', (nChunksOn+nChunksOff));
+
+for i = 1:size(avgMov, 3)
+    condHere = ceil(i/(nChunksOn+nChunksOff));
+    chunkHere = mod(i, nChunksOn+nChunksOff);
+    if chunkHere==0
+        chunkHere = nChunksOn+nChunksOff;
+    end
+    
+    % Calculate difference between current condition and other conditions:
+    avgMov(:,:,i) = mean(movDetrend(:,:,chunkId==chunkHere & condId==condHere), 3) - ...
+       mean(movDetrend(:,:,chunkId==chunkHere & condId~=condHere), 3);
+end
+
+avgMov = bsxfun(@minus, avgMov, mean(avgMov, 3));
+
 %% Subtract mean of blank and average:
 % Select which chunks (out of nChunksOn+Off) go torwards the stim and blank
 % averages:
 % stimChunks = 1:2;
-stimChunks = 1:2; % For MM101, there is a weird vessel artefact in frames 1:2 of the flank stim. Frame 3 looks better.
 blankChunks = 3:10;
 
 % Subtract mean of blank for each chunk:
