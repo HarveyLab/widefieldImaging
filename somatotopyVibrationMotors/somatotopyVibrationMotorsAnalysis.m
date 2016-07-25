@@ -1,21 +1,22 @@
 function avgMov = somatotopyVibrationMotorsAnalysis
 
 %% Settings:
-base = '\\research.files.med.harvard.edu\Neurobio\HarveyLab\Matthias\data\imaging\widefield';
-movFolder = fullfile(base, 'MM102_somato');
-datFile = fullfile(base, '2016-06-08_18-41-10_somatotopy_MM102_somato.mat');
-chunkDur_s = 0.5;
+% base = '\\research.files.med.harvard.edu\Neurobio\HarveyLab\Matthias\data\imaging\widefield';
+base = 'D:\Data\Matthias';
+movFolder = fullfile(base, 'MM102_160718', 'somato');
+datFile = fullfile(base, '20160718_184127_somatotopy_MM102_160718.mat');
+chunkDur_s = 0.2;
 
 %% Get movie metadata:
 dat = load(datFile);
 
 % Extract numbers from file name and sort accordingly:
-p = fullfile(movFolder, '*.tiff');
+p = fullfile(movFolder, '*.tiff'); %#ok<NASGU>
 list = sort(...
          strsplit(...
          regexprep(evalc('dir(p)'), '\s{2,}', '\n'), ...
          '\n')); % Sort is necessary because evalc is not sorted alphabetically.
-list = list(3:end); % Remove . and ..
+% list = list(3:end); % Remove . and ..
 % lst = dir(fullfile(movFolder, '*.tiff'));
 
 nFiles = numel(list);
@@ -30,9 +31,10 @@ for iFile = 1:nFiles
     fileNameNumber(iFile) = str2double(str);
 end
 nFramesInSyncStruct = numel(dat.frame.past.frameId);
+assert(nFramesInSyncStruct==nFiles, 'Number of image files does not match number of frames recorded in sync struct!')
 [~, order] = sort(fileNameNumber);
 lst = lst(order);
-lst = lst(1:nFramesInSyncStruct);
+% lst = lst(1:nFramesInSyncStruct); % Fix for accidentally recording retino and somato in a row.
 
 img = imread(fullfile(movFolder, lst(1).name));
 dat.mov.height = size(img, 1);
@@ -80,12 +82,12 @@ for iFrame = 1:nFramesInSyncStruct
     imgHere = double(imread(fullfile(movFolder, lst(iFrame).name)));
     imgHere(imgHere<1000) = imgHere(imgHere<1000) + 2^16; % Fix overflow
     
-    % Correct motion:
-    [imgHere, dat.mov.shifts.x(iFrame), dat.mov.shifts.y(iFrame)] = ...
-        correct_translation_singleframe(imgHere, ref);
-    
-    % Update reference:
-    ref = alpha * ref + (1-alpha) * imgHere;
+%     % Correct motion:
+%     [imgHere, dat.mov.shifts.x(iFrame), dat.mov.shifts.y(iFrame)] = ...
+%         correct_translation_singleframe(imgHere, ref);
+%     
+%     % Update reference:
+%     ref = alpha * ref + (1-alpha) * imgHere;
     
     iChunkHere = chunkOfFrame(iFrame);
     avgMov(:,:,iChunkHere) = ...

@@ -1,9 +1,10 @@
 function results = mjlmRetinotopyAnalysisFramewise
 
 %% Settings:
-base = '\\research.files.med.harvard.edu\Neurobio\HarveyLab\Matthias\data\imaging\widefield';
-movFolder = fullfile(base, 'MM102_retino');
-datFile = fullfile(base, '2016-06-08_18-22-58_retinototopy_MM102_retino.mat');
+% base = '\\research.files.med.harvard.edu\Neurobio\HarveyLab\Matthias\data\imaging\widefield';
+base = 'D:\Data\Matthias';
+movFolder = fullfile(base, 'lightTightTest');
+datFile = fullfile(base, '20160719_133126_retinotopy_lightTightTest.mat');
 isSubtractBaseline = false;
 
 %% Get movie metadata:
@@ -11,12 +12,7 @@ dat = load(datFile);
 
 % Extract numbers from file name and sort accordingly:
 p = fullfile(movFolder, '*.tiff');
-list = sort(...
-         strsplit(...
-         regexprep(evalc('dir(p)'), '\s{2,}', '\n'), ...
-         '\n')); % Sort is necessary because evalc is not sorted alphabetically.
-list = list(3:end); % Remove . and ..
-% lst = dir(fullfile(movFolder, '*.tiff'));
+list = sort(strsplit(regexprep(evalc('dir(p)'), '\s{2,}', '\n'), '\n')); % Sort is necessary because evalc is not sorted alphabetically.
 
 nFiles = numel(list);
 lst = struct;
@@ -158,14 +154,17 @@ else
     % Go through data frame by frame. Bin data by bar positon. Keep a running
     % average for baseline subtraction.
 
-    % Motioncorrect on moving average reference:
-    ref = double(imread(fullfile(movFolder, lst(1).name)));
+    % For motion correction, use center frame as reference:
+    ref = double(imread(fullfile(movFolder, lst(round(nFramesInSyncStruct/2)).name)));
     ref(ref<1000) = ref(ref<1000) + 2^16; % Fix overflow
-    halflife_frames = 1000;
-    alpha = exp(log(0.5)/halflife_frames);
-    dat.mov.shifts.x = zeros(nFramesInSyncStruct, 1);
-    dat.mov.shifts.y = zeros(nFramesInSyncStruct, 1);
+    
+    % Pre-calculate reference FFT:
+    ref_fft = zeros(size(ref, 1), size(ref, 2), 3);
+    ref_fft(:,:,1) = fft2(ref);
+    ref_fft(:,:,2) = fftshift(ref_fft(:,:,1));
+    ref_fft(:,:,3) = conj(ref_fft(:,:,1));
 
+    ticProc = tic;
     for iCond = 1:nCond
         for iFrame = results(iCond).iStart : results(iCond).iEnd
             % Load frame:
@@ -174,18 +173,15 @@ else
 
             % Correct motion:
             [imgHere, dat.mov.shifts.x(iFrame), dat.mov.shifts.y(iFrame)] = ...
-                correct_translation_singleframe(imgHere, ref);
-
-            % Update reference:
-            ref = alpha * ref + (1-alpha) * imgHere;
+                correct_translation_singleframe(imgHere, ref_fft, 1);
     
             % Add current frame to the appropriate bin:
             iBin = barPosBinned(iFrame);
             results(iCond).tuning(:,:,iBin) = results(iCond).tuning(:,:,iBin) ...
                 + imgHere ./ results(iCond).nInBin(iBin);
             
-            fprintf('Processing frame % 6.0f/% 6.0f\n', ...
-                iFrame, nFramesInSyncStruct);
+            fprintf('Processing frame % 6.0f/% 1.0f (%1.1f minutes left)\n', ...
+                iFrame, nFramesInSyncStruct, (toc(ticProc)/(60*iFrame)) * (nFramesInSyncStruct-iFrame));
         end
     end 
 end
