@@ -19,5 +19,5 @@ tex.yz = [cosd(-direction_deg), -sind(-direction_deg); ...
 [tex.azi_deg, tex.alt_deg, ~] = cart2sph(tex.x, tex.yz(1, :), tex.yz(2, :));
 tex.azi_deg = rad2deg(tex.azi_deg);
 tex.alt_deg = rad2deg(tex.alt_deg);
-tex.checkerMask = cos(2*(pi/settings.barWidth_deg).*tex.azi_deg);
+tex.checkerMask = cos((pi/settings.barWidth_deg).*tex.azi_deg);
 tex.altLimits_deg = [min(tex.alt_deg), max(tex.alt_deg)];
