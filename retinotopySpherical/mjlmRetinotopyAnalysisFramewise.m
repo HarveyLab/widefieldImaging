@@ -3,9 +3,8 @@ function results = mjlmRetinotopyAnalysisFramewise
 %% Settings:
 % base = '\\research.files.med.harvard.edu\Neurobio\HarveyLab\Matthias\data\imaging\widefield';
 base = 'D:\Data\Matthias';
-movFolder = fullfile(base, 'lightTightTest');
-datFile = fullfile(base, '20160719_133126_retinotopy_lightTightTest.mat');
-isSubtractBaseline = false;
+movFolder = fullfile(base, 'MM104_160729_retino');
+datFile = fullfile(base, '20160729_190439_retinotopy_MM104.mat');
 
 %% Get movie metadata:
 dat = load(datFile);
@@ -51,9 +50,7 @@ results = struct;
 for iCond = 1:nCond
     results(iCond).dir = uniqueDir(iCond);
     isFrameThisCond = dat.frame.past.barDirection_deg==results(iCond).dir;
-    results(iCond).iStart = find(isFrameThisCond(1:temporalDownSampling:end), 1, 'first');
-    results(iCond).iEnd = find(isFrameThisCond(1:temporalDownSampling:end), 1, 'last');
-    results(iCond).nFrames = sum(isFrameThisCond(1:temporalDownSampling:end));
+    results(iCond).nFrames = sum(isFrameThisCond);
     results(iCond).nReps = sum(abs(diff(dat.frame.past.barPosition_deg) .* isFrameThisCond(max(temporalDownSampling, 2):end))>10);
     if iCond==1
         results(iCond).nReps = results(iCond).nReps+1;
@@ -67,123 +64,41 @@ for iCond = 1:nCond
 end
 
 %% Retinotopy extraction algorithm:
-if isSubtractBaseline
-    % Go through data frame by frame. Bin data by bar positon. Keep a running
-    % average for baseline subtraction.
 
-    for iCond = 1:nCond
-        baselineWin = round(results(iCond).period * 2);
-        baselineLead = round(baselineWin/2);
-        iBaselineStack = 0;
-        baselineStack = [];
+% Go through data frame by frame. Bin data by bar positon. Keep a running
+% average for baseline subtraction.
 
-    %     Pre-load the frames needed for the baseline:
-        for iBaselineStack = 1:baselineWin
-            iFrameForBaseline = results(iCond).iStart - baselineLead + iBaselineStack;
-            iFrameForBaseline = min(max(iFrameForBaseline, 1), nFramesInSyncStruct);
+% For motion correction, use center frame as reference:
+% (SNR is good enough to just use one frame.)
+ref = double(imread(fullfile(movFolder, lst(round(nFramesInSyncStruct/2)).name)));
+ref(ref<1000) = ref(ref<1000) + 2^16; % Fix overflow
 
-            imgHere = double(imread(fullfile(movFolder, lst(iFrameForBaseline).name)));
-            imgHere(imgHere<1000) = imgHere(imgHere<1000) + 2^16; % Fix overflow
+% Pre-calculate reference FFT:
+ref_fft = zeros(size(ref, 1), size(ref, 2), 3);
+ref_fft(:,:,1) = fft2(ref);
+ref_fft(:,:,2) = fftshift(ref_fft(:,:,1));
+ref_fft(:,:,3) = conj(ref_fft(:,:,1));
 
-            if isempty(baselineStack)
-                baselineStack = repmat(imgHere, 1, 1, baselineWin);
-            else
-                baselineStack(:,:,iBaselineStack) = imgHere; %#ok<AGROW>
-            end
-        end
-        baseline = mean(baselineStack, 3);
-
-        for iFrame = results(iCond).iStart : results(iCond).iEnd
-            % iBaselineStack keeps track of the current frame in the baseline
-            % stack. The stack is a circular buffer and we don't want to use
-            % circshift for speed reasons.
-            iBaselineStack = mod(iBaselineStack, baselineWin) + 1;
-
-            % Store newest frame in baseline stack:
-            iFrameForBaseline = iFrame + baselineLead;
-
-            if iFrameForBaseline <= nFramesInSyncStruct
-                % Subtract oldest frame from baseline:
-                baseline = baseline - baselineStack(:,:,iBaselineStack)./baselineWin;
-
-                imgHere = double(imread(fullfile(movFolder, lst(iFrameForBaseline).name)));
-                imgHere(imgHere<1000) = imgHere(imgHere<1000) + 2^16; % Fix overflow
-                baselineStack(:,:,iBaselineStack) = imgHere; %#ok<AGROW>
-
-                % Add newest frame to baseline:
-                baseline = baseline + baselineStack(:,:,iBaselineStack) ./ baselineWin;
-            end
-
-            % The currently analyzed frame lags behind the most recent baseline
-            % frame because the baseline window is supposed to be centered on
-            % the currently analyzed frame. So we get the currently analyzed
-            % frame from the baseline stack. We then correct current frame by
-            % subtractidng the baseline, scaled so that the overall weight of
-            % the baseline is 1:
-            iForAnalysis = mod(iBaselineStack-baselineLead-1, baselineWin)+1;
-            imgForAnalysis = baselineStack(:, :, iForAnalysis);
-            imgForAnalysis = imgForAnalysis - baseline;
-
-            % Add current frame to the appropriate bin:
-            iBin = barPosBinned(iFrame);
-
-            results(iCond).tuning(:,:,iBin) = results(iCond).tuning(:,:,iBin) ...
-                + imgForAnalysis ./ results(iCond).nInBin(iBin);
-
-    %         cond(iCond).tuning(:,:,iBin) = cond(iCond).tuning(:,:,iBin) ...
-    %             + double(imread(fullfile(movFolder, lst(iFrame).name))) ...
-    %             ./ cond(iCond).nInBin(iBin);
-
-            % For debugging:
-            %         figure(1)
-            %         imagesc(baseline)
-            %
-            %         figure(2)
-            %         imagesc(imgHere)
-            %
-            %         figure(3)
-            %         imagesc(cond(i).tuning(:,:,iBin))
-            %         1;
-
-            fprintf('Processing frame % 6.0f/% 6.0f\n', ...
-                iFrame, nFramesInSyncStruct);
-        end
+ticProc = tic;
+for iCond = 1:nCond
+    thisCondFrameInd = find(dat.frame.past.barDirection_deg==results(iCond).dir);
+    for iFrame = thisCondFrameInd
+        % Load frame:
+        imgHere = double(imread(fullfile(movFolder, lst(iFrame).name)));
+        imgHere(imgHere<1000) = imgHere(imgHere<1000) + 2^16; % Fix occasional overflow
+        
+        % Correct motion:
+        [imgHere, dat.mov.shifts.x(iFrame), dat.mov.shifts.y(iFrame)] = ...
+            correct_translation_singleframe(imgHere, ref_fft, 1);
+        
+        % Add current frame to the appropriate bin:
+        iBin = barPosBinned(iFrame);
+        results(iCond).tuning(:,:,iBin) = results(iCond).tuning(:,:,iBin) ...
+            + imgHere ./ results(iCond).nInBin(iBin);
+        
+        fprintf('Processing frame % 6.0f/% 1.0f (%1.1f minutes left)\n', ...
+            iFrame, nFramesInSyncStruct, (toc(ticProc)/(60*iFrame)) * (nFramesInSyncStruct-iFrame));
     end
-
-else
-    % Go through data frame by frame. Bin data by bar positon. Keep a running
-    % average for baseline subtraction.
-
-    % For motion correction, use center frame as reference:
-    ref = double(imread(fullfile(movFolder, lst(round(nFramesInSyncStruct/2)).name)));
-    ref(ref<1000) = ref(ref<1000) + 2^16; % Fix overflow
-    
-    % Pre-calculate reference FFT:
-    ref_fft = zeros(size(ref, 1), size(ref, 2), 3);
-    ref_fft(:,:,1) = fft2(ref);
-    ref_fft(:,:,2) = fftshift(ref_fft(:,:,1));
-    ref_fft(:,:,3) = conj(ref_fft(:,:,1));
-
-    ticProc = tic;
-    for iCond = 1:nCond
-        for iFrame = results(iCond).iStart : results(iCond).iEnd
-            % Load frame:
-            imgHere = double(imread(fullfile(movFolder, lst(iFrame).name)));
-            imgHere(imgHere<1000) = imgHere(imgHere<1000) + 2^16; % Fix occasional overflow
-
-            % Correct motion:
-            [imgHere, dat.mov.shifts.x(iFrame), dat.mov.shifts.y(iFrame)] = ...
-                correct_translation_singleframe(imgHere, ref_fft, 1);
-    
-            % Add current frame to the appropriate bin:
-            iBin = barPosBinned(iFrame);
-            results(iCond).tuning(:,:,iBin) = results(iCond).tuning(:,:,iBin) ...
-                + imgHere ./ results(iCond).nInBin(iBin);
-            
-            fprintf('Processing frame % 6.0f/% 1.0f (%1.1f minutes left)\n', ...
-                iFrame, nFramesInSyncStruct, (toc(ticProc)/(60*iFrame)) * (nFramesInSyncStruct-iFrame));
-        end
-    end 
 end
 
 dat.mov.ref = ref;

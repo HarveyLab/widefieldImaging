@@ -62,7 +62,7 @@ void loop() {
       sprintf(msg, "Executing state %d.", state);
       printlnDebug(msg);
       switchAllVibOff();
-      analogWrite(pinVib[state-1], 127);
+      analogWrite(pinVib[state-1], 255);
       break;
 
     case 99:

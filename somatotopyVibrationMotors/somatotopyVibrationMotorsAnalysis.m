@@ -3,9 +3,9 @@ function avgMov = somatotopyVibrationMotorsAnalysis
 %% Settings:
 % base = '\\research.files.med.harvard.edu\Neurobio\HarveyLab\Matthias\data\imaging\widefield';
 base = 'D:\Data\Matthias';
-movFolder = fullfile(base, 'MM102_160718', 'somato');
-datFile = fullfile(base, '20160718_184127_somatotopy_MM102_160718.mat');
-chunkDur_s = 0.2;
+movFolder = fullfile(base, 'MM104_160729_somato2');
+datFile = fullfile(base, '20160729_195518_somatotopy_MM104_2.mat');
+chunkDur_s = 0.25;
 
 %% Get movie metadata:
 dat = load(datFile);
@@ -13,9 +13,9 @@ dat = load(datFile);
 % Extract numbers from file name and sort accordingly:
 p = fullfile(movFolder, '*.tiff'); %#ok<NASGU>
 list = sort(...
-         strsplit(...
-         regexprep(evalc('dir(p)'), '\s{2,}', '\n'), ...
-         '\n')); % Sort is necessary because evalc is not sorted alphabetically.
+    strsplit(...
+    regexprep(evalc('dir(p)'), '\s{2,}', '\n'), ...
+    '\n')); % Sort is necessary because evalc is not sorted alphabetically.
 % list = list(3:end); % Remove . and ..
 % lst = dir(fullfile(movFolder, '*.tiff'));
 
@@ -69,31 +69,33 @@ nChunks = max(chunkOfFrame);
 avgMov = zeros(dat.mov.height, dat.mov.width, nChunks);
 nInChunk = accumarray(chunkOfFrame', ones(size(chunkOfFrame)));
 
-% Motioncorrect on moving average reference:
-ref = double(imread(fullfile(movFolder, lst(1).name)));
+% For motion correction, use center frame as reference:
+% (SNR is good enough to just use one frame.)
+ref = double(imread(fullfile(movFolder, lst(round(nFramesInSyncStruct/2)).name)));
 ref(ref<1000) = ref(ref<1000) + 2^16; % Fix overflow
-halflife_frames = 1000;
-alpha = exp(log(0.5)/halflife_frames);
-dat.mov.shifts.x = zeros(nFramesInSyncStruct, 1);
-dat.mov.shifts.y = zeros(nFramesInSyncStruct, 1);
 
+% Pre-calculate reference FFT:
+ref_fft = zeros(size(ref, 1), size(ref, 2), 3);
+ref_fft(:,:,1) = fft2(ref);
+ref_fft(:,:,2) = fftshift(ref_fft(:,:,1));
+ref_fft(:,:,3) = conj(ref_fft(:,:,1));
+
+ticProc = tic;
 for iFrame = 1:nFramesInSyncStruct
     % Load frame:
     imgHere = double(imread(fullfile(movFolder, lst(iFrame).name)));
     imgHere(imgHere<1000) = imgHere(imgHere<1000) + 2^16; % Fix overflow
     
-%     % Correct motion:
-%     [imgHere, dat.mov.shifts.x(iFrame), dat.mov.shifts.y(iFrame)] = ...
-%         correct_translation_singleframe(imgHere, ref);
-%     
-%     % Update reference:
-%     ref = alpha * ref + (1-alpha) * imgHere;
+    % Correct motion:
+    [imgHere, dat.mov.shifts.x(iFrame), dat.mov.shifts.y(iFrame)] = ...
+        correct_translation_singleframe(imgHere, ref_fft, 1);
     
     iChunkHere = chunkOfFrame(iFrame);
     avgMov(:,:,iChunkHere) = ...
-        avgMov(:,:,iChunkHere) + imgHere/nInChunk(iChunkHere);    
-    fprintf('Processing frame % 6.0f/% 6.0f\n', ...
-        iFrame, nFramesInSyncStruct);
+        avgMov(:,:,iChunkHere) + imgHere/nInChunk(iChunkHere);
+    
+    fprintf('Processing frame % 6.0f/% 1.0f (%1.1f minutes left)\n', ...
+        iFrame, nFramesInSyncStruct, (toc(ticProc)/(60*iFrame)) * (nFramesInSyncStruct-iFrame));
 end
 
 dat.mov.ref = ref;

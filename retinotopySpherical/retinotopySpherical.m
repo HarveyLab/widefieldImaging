@@ -1,4 +1,4 @@
-error('get timing prediction right')
+% error('get timing prediction right')
 % error('Cover left eye!')
 % error('Ensure that right eye can only see screen, no reflections')
 % error('Interleave all conditions?')
@@ -10,8 +10,8 @@ settings = struct;
 settings.saveDir = 'D:\Data\Matthias';
 settings.expName = char(inputdlg('Experiment Name? '));
 % 10 reps was not enough with transgenic. Try 20.
-settings.nRepeats = 36; % How often each direction is repeated, i.e. there will be 4 times as many sweeps. Garrett uses 6-10 times 10, so up to 100 sweeps!
-settings.nRepeatsPerBlock = 6;
+settings.nRepeats = 50; % How often each direction is repeated, i.e. there will be 4 times as many sweeps. Garrett uses 6-10 times 10, so up to 100 sweeps!
+settings.nRepeatsPerBlock = 36;
 settings.barWidth_deg = 10; % Marshel uses 20
 settings.barSpeed_dps = 10; % Marshel uses 8.5-9.5 dps
 settings.checkerBlink_hz = 6; % Marshel uses 6 Hz
@@ -20,8 +20,12 @@ settings.screenOri_xyPix = [-104, 35];
 settings.pixelReductionFactor = 5; % How much the texture is downsampled...affects frame rate.
 settings.fps = 60; % Target display/acquisition rate. Max is 120 Hz (monitor refresh)
 
-% Empirical duration for Marshel settings:
-expDur = settings.nRepeats * 2 * (11.6182 + 14.6516) * settings.barSpeed_dps/9;
+% Empirical duration:
+screenWidthDegTheoretical = 132.7;
+screenHeightDegTheoretical = 104.5;
+expDur = settings.nRepeats * ...
+    4 * ... % Number of conditions/bar directions
+    (screenWidthDegTheoretical+screenHeightDegTheoretical)*0.5/settings.barSpeed_dps;
 button = questdlg(sprintf('Experiment will take about %1.1f minutes. Click YES to start.', ...
     expDur/60));
 if ~strcmp(button, 'Yes')
@@ -118,7 +122,7 @@ while KbCheck
 end
 
 nRepeatsDone = 0;
-while (nRepeatsDone <= settings.nRepeats * 4) && ~isExit
+while (nRepeatsDone < settings.nRepeats) && ~isExit
     nRepeatsDone = nRepeatsDone + settings.nRepeatsPerBlock;
     for iCond = 1:4
         switch iCond
