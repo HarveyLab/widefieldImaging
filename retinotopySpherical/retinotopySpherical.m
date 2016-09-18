@@ -1,3 +1,5 @@
+function retinotopySpherical
+
 % error('get timing prediction right')
 % error('Cover left eye!')
 % error('Ensure that right eye can only see screen, no reflections')
@@ -58,7 +60,7 @@ if false
     end
 end
 
-%% Take snapshot of taskScheduleFun so that it can be reconstructed later:
+%% Take snapshot of code file so that it can be reconstructed later:
 % (display with fprintf('%s', sn.meta.fileTaskSchedule);
 fid = fopen([mfilename('fullpath'), '.m'], 'rt');
 settings.experimentCodeFile = fread(fid, inf, '*char');
@@ -95,6 +97,7 @@ frameStruct.barDirection_deg = 0;
 frameStruct.barPosition_deg = 0;
 frame = eventSeries(frameStruct);
 
+saveMetadataFile(settings, frame)
 %% Screen Setup
 if isDebug
     Screen('Preference', 'SkipSyncTests', 2);
@@ -197,6 +200,11 @@ while (nRepeatsDone < settings.nRepeats) && ~isExit
             end
         end
         
+        % Save metadata after each block (for online analysis) (short pause
+        % after each block should be no problem, maybe good, to reduce
+        % aftereffect of last block):
+        saveMetadataFile(settings, frame)
+        
         if isExit
             break
         end
@@ -204,16 +212,9 @@ while (nRepeatsDone < settings.nRepeats) && ~isExit
 end
 
 %% Clean up
-% Save:
-if ~exist(settings.saveDir, 'dir')
-    mkdir(settings.saveDir);
-end
-saveFileName = fullfile(settings.saveDir, ...
-    [datestr(now, 'yyyymmdd_HHMMSS'), '_retinotopy_', settings.mouseName]);
 
-mfile = fileread(which(mfilename));
-save(saveFileName, 'settings', 'screen', 'frame', 'mfile')
-fprintf('Retinotopy data saved at %s.\n', saveFileName)
+% Save:
+saveMetadataFile(settings, frame, mfile)
 
 Priority(oldPriority);
 Screen('CloseAll');
@@ -222,4 +223,16 @@ if ~isDebug
     % Close DAQ:
     outputSingleScan(camControl, [0 0 0])
     delete(camControl)
+end
+
+function saveMetadataFile(settings, frame)
+    if ~exist(settings.saveDir, 'dir')
+        mkdir(settings.saveDir);
+    end
+    saveFileName = fullfile(settings.saveDir, ...
+        [datestr(now, 'yyyymmdd_HHMMSS'), '_retinotopy_', settings.mouseName]);
+
+    save(saveFileName, 'settings', 'screen', 'frame', 'mfile')
+    fprintf('Retinotopy data saved at %s.\n', saveFileName)
+end
 end
