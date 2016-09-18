@@ -2,7 +2,7 @@ function avgMov = somatotopyVibrationMotorsAnalysis
 
 %% Settings:
 % base = '\\research.files.med.harvard.edu\Neurobio\HarveyLab\Matthias\data\imaging\widefield';
-base = 'D:\Data\Matthias';
+base = 'E:\scratch\';
 movFolder = fullfile(base, 'MM102_160718', 'somato');
 datFile = fullfile(base, '20160718_184127_somatotopy_MM102_160718.mat');
 chunkDur_s = 0.2;

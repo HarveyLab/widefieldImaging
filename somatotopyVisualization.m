@@ -1,13 +1,19 @@
 %% Load averaged movie:
 % p = '\\intrinsicScope\D\Data\Matthias';
 % p = '\\research.files.med.harvard.edu\Neurobio\HarveyLab\Matthias\data\imaging\widefield';
-p = 'T:\';
-mov = tiffRead(fullfile(p, '20160718_184127_somatotopy_MM102_160718_avgMov160719.tif'));
-% mov = tiffRead(fullfile('E:\', '20160718_184127_somatotopy_MM102_160718_avgMov160719.tif')); % No mtion corr.
-meta = load(fullfile(p, '20160718_184127_somatotopy_MM102_160718.mat'));
+% p = 'T:\';
+p = 'E:\scratch';
+
+% MM102:
+% mov = tiffRead(fullfile(p, '20160718_184127_somatotopy_MM102_160718_avgMov160719.tif')); % No mtion corr.
+% meta = load(fullfile(p, '20160718_184127_somatotopy_MM102_160718.mat'));
+
+% MM104:
+mov = single(tiffRead(fullfile(p, '20160729_195518_somatotopy_MM104_2_avgMov160729.tif')));
+meta = load(fullfile(p, '20160729_195518_somatotopy_MM104_2.mat'));
+
 [height, width, nFrames] = size(mov);
 
-movDetrend = mov;
 % for i = 1:nFrames
 %     i
 %     movDetrend(:,:,i) = imgaussfilt(movDetrend(:,:,i), 5);
@@ -16,22 +22,31 @@ movDetrend = mov;
 % movDetrend = bsxfun(@rdivide, bsxfun(@minus, movDetrend, mn), mn);
 
 %% Settings:
-nChunksOn = meta.settings.onTime_s/0.2;
-nChunksOff = meta.settings.offTime_s/0.2;
+nChunksOn = meta.settings.onTime_s/0.25;
+nChunksOff = meta.settings.offTime_s/0.25;
 nCond = numel(meta.settings.motorPositionName);
 nChunksPerTrial = nChunksOn + nChunksOff;
 
-%% Get mean trace for ROI:
-iRow = 53:90;
-iCol = 343:391;
-trace = squeeze(mean(mean(mov(iRow, iCol, :), 1), 2));
-figure(1)
-clf
-hold on
-plot(trace)
-onFrames = 1:(nChunksOn+nChunksOff):numel(trace);
-onFrames = cat(2, onFrames, onFrames+1);
-plot(onFrames, trace(onFrames), '.r')
+%% (Get mean trace for ROI:)
+% iRow = 53:90;
+% iCol = 343:391;
+% trace = squeeze(mean(mean(mov(iRow, iCol, :), 1), 2));
+% figure(1)
+% clf
+% hold on
+% plot(trace)
+% onFrames = 1:(nChunksOn+nChunksOff):numel(trace);
+% onFrames = cat(2, onFrames, onFrames+1);
+% plot(onFrames, trace(onFrames), '.r')
+
+%% Create DF movie:
+movDiff = mov;
+for i = nChunksPerTrial:nChunksPerTrial:(nFrames-nChunksPerTrial)
+    i
+    movDiff(:,:,i+(1:nChunksPerTrial)) = ...
+        bsxfun(@minus, mov(:,:,i+(1:nChunksPerTrial)), mov(:,:,i));
+end
+movDiff(:,:,[1:nChunksPerTrial (end-nChunksPerTrial+1):end]) = nan;
 
 %% For each condition, average all repeats:
 avgMov = zeros(height, width, (nChunksOn+nChunksOff)*nCond);
@@ -39,6 +54,7 @@ chunkId = repmat(1:(nChunksOn+nChunksOff), 1, meta.settings.nRepeats*nCond);
 condId = repelem(meta.settings.motorSequence', (nChunksOn+nChunksOff));
 
 for i = 1:size(avgMov, 3)
+    i
     condHere = ceil(i/(nChunksOn+nChunksOff));
     chunkHere = mod(i, nChunksOn+nChunksOff);
     if chunkHere==0
@@ -46,11 +62,13 @@ for i = 1:size(avgMov, 3)
     end
     
     % Calculate difference between current condition and other conditions:
-    avgMov(:,:,i) = mean(movDetrend(:,:,chunkId==chunkHere & condId==condHere), 3) - ...
-       mean(movDetrend(:,:,chunkId==chunkHere & condId~=condHere), 3);
+%     avgMov(:,:,i) = nanmean(movDiff(:,:,chunkId==chunkHere & condId==condHere), 3) - ...
+%        nanmean(movDiff(:,:,chunkId==chunkHere & condId~=condHere), 3);
+    avgMov(:,:,i) = nanmean(movDiff(:,:,chunkId==chunkHere & condId==condHere), 3);
 end
 
 avgMov = bsxfun(@minus, avgMov, mean(avgMov, 3));
+ijPlay(avgMov)
 
 %% Subtract mean of blank and average:
 % Select which chunks (out of nChunksOn+Off) go torwards the stim and blank
@@ -62,10 +80,10 @@ blankChunks = 3:10;
 movSub = zeros(height, width, nFrames/nChunksPerTrial);
 for i = 0:nChunksPerTrial:(nFrames-nChunksPerTrial)
     % Average the chunks containing the response:
-    stim = mean(movDetrend(:,:,stimChunks+i), 3);
+    stim = mean(mov(:,:,stimChunks+i), 3);
     
     % Average the chunks used as the baseline:
-    baseline = mean(movDetrend(:,:,blankChunks+i), 3);
+    baseline = mean(mov(:,:,blankChunks+i), 3);
     
     % Calculate dR/R:
     movSub(:,:,(i+nChunksPerTrial)/nChunksPerTrial) = (stim-baseline) ./ baseline;

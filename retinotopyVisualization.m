@@ -1,8 +1,8 @@
 %% Load data:
-% p = '\\intrinsicScope\D\Data\Matthias';
-p = 'T:\';
-load(fullfile(p, '20160718_182703_retinotopy_MM102_160718_results160718.mat'));
-meta = load(fullfile(p, '20160718_182703_retinotopy_MM102_160718.mat'));
+p = '\\intrinsicScope\D\Data\Matthias';
+% p = 'E:\scratch\MM102_retino';
+load(fullfile(p, '20160907_203252_retinotopy_MM102_results160912.mat'));
+meta = load(fullfile(p, '20160907_203252_retinotopy_MM102.mat'));
 % p = 'T:\ltt\';
 % load(fullfile(p, '20160719_133126_retinotopy_lightTightTest_results160719.mat'));
 % meta = load(fullfile(p, '20160719_133126_retinotopy_lightTightTest.mat'));
@@ -32,7 +32,7 @@ end
 %     for ii = 1:size(results(i).tuning, 3)
 %         % Normalize by each frame's brightness:
 %         results(i).tuningCorr(:,:,ii) = results(i).tuningCorr(:,:,ii) ...
-%             ./ mean(col(results(i).tuningCorr(:,:,ii)));
+%             ./ mean(col(results(i).tuningCorr(:,:,ii).*isV1));
 %         
 %         % Apply smoothing:
 % %         results(i).tuningCorr(:,:,ii) = imgaussfilt(results(i).tuningCorr(:,:,ii), 10);
@@ -78,7 +78,10 @@ end
 
 %% Play movies for visual inspection:
 for i = 1:nCond
-    ijPlay(results(i).tuningCorr(:,:,results(i).isGoodFrame), sprintf('Condition %d', i));
+    ijPlay(...
+        bsxfun(@minus, results(i).tuningCorr(:,:,results(i).isGoodFrame), ...
+        mean(results(i).tuningCorr(:,:,results(i).isGoodFrame), 3)), ...
+        sprintf('Condition %d', i));
 end
 
 %% Plot
@@ -89,7 +92,7 @@ clf
 
 subplot(2, 3, 1);
 imagesc(wrapToPi(angle(results(1+2*isBackwards).fft)), [-pi pi])
-% imagesc(wrapToPi(angle(results(4).fft)), [-pi pi])
+% imagesc(wrapToPi(angle(results(3).fft)), [-pi pi])
 colormap(gca, jet)
 colorbar
 axis equal
@@ -103,7 +106,7 @@ axis equal
 title('Horizontal single condition')
 
 subplot(2, 3, 2);
-% meanVerti = -wrapToPi((angle(results(1).fft)-angle(results(3).fft))/2);
+% meanVerti = wrapToPi((angle(results(1).fft)+angle(results(3).fft))/2);
 meanVerti = wrapToPi(angle(results(1+2*isBackwards).fft));
 imagesc(meanVerti, [-pi pi])
 colormap(gca, jet)
@@ -113,7 +116,7 @@ title('Vertical mean (more positive = higher altitude)')
 colorbar
 
 subplot(2, 3, 5);
-% meanHori = wrapToPi((angle(results(2).fft)-angle(results(4).fft))/2);
+% meanHori = wrapToPi((angle(results(2).fft)+angle(results(4).fft))/2);
 meanHori = wrapToPi(angle(results(2+2*isBackwards).fft));
 imagesc(meanHori, [-pi pi])
 colormap(gca, jet)
@@ -123,13 +126,11 @@ title('Horizontal mean (more positive = more temporal)')
 colorbar
 
 subplot(2, 3, 3);
-% imagesc(log(abs(results(1).fft)) ...
-%     + log(abs(results(3).fft)) ...
-%     + log(abs(results(2).fft)) ...
-%     + log(abs(results(4).fft)), ...
-%     [-19 -6])
-imagesc(log(abs(results(1).fft)) ...
-    + log(abs(results(2).fft)))
+powerCombined = abs(results(1).fft) ...
+    + abs(results(3).fft) ...
+    + abs(results(2).fft) ...
+    + abs(results(4).fft);
+imagesc(powerCombined, prctile(powerCombined(:), [0.5 99.5]))
 colormap(gca, jet)
 axis equal
 title('Combined power')
@@ -144,9 +145,9 @@ colormap(gca, jet)
 title('Field sign')
 axis equal
 
-%% Ssve field sign:
+%% Save field sign:
 p = '\\research.files.med.harvard.edu\Neurobio\HarveyLab\Matthias\data\imaging\widefield\MM102\map';
-n = 'MM102_160718_overview';
+n = 'MM102_160902_overview';
 imwrite(ceil(mat2gray(imgaussfilt(fieldSign, smoothRad))*255), jet(255), fullfile(p, [n '_fieldsign.png']))
 
 %% Get delay:
@@ -170,26 +171,43 @@ end
 % axis equal
 
 subplot(2, 3, 2);
-meanHori = -wrapToPi((results(1).angleNoDelay-results(3).angleNoDelay)/2);
-imagesc(meanHori, [-pi pi])
+meanHori = wrapToPi((results(1).angleNoDelay+results(3).angleNoDelay)/2);
+imagesc(meanHori, [-pi pi]/1.5)
 colormap(gca, jet)
 title('Vertical mean (more positive = higher altitude)')
 colorbar
 axis equal
 
 subplot(2, 3, 5);
-meanVerti = wrapToPi((results(2).angleNoDelay-results(4).angleNoDelay)/2);
-imagesc(meanVerti, [-pi pi])
+meanVerti = wrapToPi((results(2).angleNoDelay+results(4).angleNoDelay)/2);
+imagesc(meanVerti, [-pi pi]/1.5)
 colormap(gca, jet)
 title('Horizontal mean (more positive = more temporal)')
 colorbar
 axis equal
 
+% Note: Field sign is not affected by subtractind delay.
 subplot(2, 3, 6);
-smoothRad = 5;
 [~, Gdir1] = imgradient(imgaussfilt(meanVerti, smoothRad));
 [~, Gdir2] = imgradient(imgaussfilt(meanHori, smoothRad));
 fieldSign = sind(Gdir2 - Gdir1);
-imagesc(imgaussfilt(fieldSign, smoothRad))
+fieldSign = imgaussfilt(fieldSign, smoothRad);
+imagesc(fieldSign)
 colormap(gca, jet)
+title('Field sign')
 axis equal
+
+%% Save data:
+wfDir = '\\research.files.med.harvard.edu\Neurobio\HarveyLab\Matthias\data\imaging\widefield\';
+mapDir = fullfile(wfDir, 'MM104\map');
+if ~exist(mapDir, 'dir')
+    mkdir(mapDir);
+end
+
+fname = [meta.settings.expName '_retino'];
+
+imInd = gray2ind(mat2gray(powerCombined), 255);
+imwrite(imInd, jet(255), fullfile(mapDir, [fname, '_power.png']));
+
+imInd = gray2ind(mat2gray(fieldSign), 255);
+imwrite(imInd, jet(255), fullfile(mapDir, [fname, '_fieldSign.png']));
