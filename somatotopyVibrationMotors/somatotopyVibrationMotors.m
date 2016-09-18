@@ -1,11 +1,18 @@
 function somatotopyVibrationMotors
 
-error('Ensure that no motor, esp. neck, makes a loud sound when vibrating. maybe use plastic rod to transmit vibration, rather than using motor directly on fur')
-error('use motor vibrating against something close to right ear to map aud cx')
-error('don''t use flank -- no clear signal')
-error('raise the foot so that it dangles freely and the motor only touches the foot, not the whole leg/flank')
-error('convert these errors to warnings or so, so that I see them every time')
-error('Maybe remove offTime and do many more faster trials. There is a clear singal after 0.4 s and the singal is almost gone 1 s after the stimulus offset. maybe do 0.4 on/0.4 off and many more trials
+% Next time:
+% error('Make vibration stronger')
+% error('Try longer trials, maybe 1s on, 1s off')
+% error('Do "neck" further down on back...avoid vibrating head plate')
+% error('Don''t do audio, A1 is probably not visible after all')
+% error('Ensure that foot is really solidly in contact with stimulator (maybe bind it with string or so)')
+
+% error('Ensure that no motor, esp. neck, makes a loud sound when vibrating. maybe use plastic rod to transmit vibration, rather than using motor directly on fur')
+% error('use motor vibrating against something close to right ear to map aud cx')
+% error('don''t use flank -- no clear signal')
+% error('raise the foot so that it dangles freely and the motor only touches the foot, not the whole leg/flank')
+% error('convert these errors to warnings or so, so that I see them every time')
+% error('Maybe remove offTime and do many more faster trials. There is a clear singal after 0.4 s and the singal is almost gone 1 s after the stimulus offset. maybe do 0.4 on/0.4 off and many more trials
 
 %% User settings:
 isDebug = false;
@@ -13,13 +20,12 @@ settings = struct;
 settings.saveDir = 'D:\Data\Matthias';
 settings.expName = char(inputdlg('Experiment Name? '));
 % 20 Reps was OK but go higher if there's time
-settings.nRepeats = 240; % How often the whole set of conditions is repreated.
-settings.onTime_s = 0.4; % How long each motor is on
-settings.offTime_s = 0.4; % Off-time in betwee stimuli
+settings.nRepeats = 150; % How often the whole set of conditions is repreated.
+settings.onTime_s = 1; % How long each motor is on
+settings.offTime_s = 1; % Off-time in betwee stimuli
 
 % Audio must come at s the last "motor" and must be called "audio"
-settings.motorPositionName = {'snout', ...
-    'flank', 'hindpaw', 'neck', 'audio'};
+settings.motorPositionName = {'snout', 'neck', 'hindpaw'};
 settings.motorSequence = getMinimumRepetitionSequence(...
     numel(settings.motorPositionName), ...
     numel(settings.motorPositionName)*settings.nRepeats);
@@ -33,6 +39,12 @@ button = questdlg(sprintf('Experiment will take about %1.1f minutes. Click YES t
 if ~strcmp(button, 'Yes')
     return
 end
+
+%% Take snapshot of taskScheduleFun so that it can be reconstructed later:
+% (display with fprintf('%s', sn.meta.fileTaskSchedule);
+fid = fopen([mfilename('fullpath'), '.m'], 'rt');
+settings.experimentCodeFile = fread(fid, inf, '*char');
+fclose(fid);
 
 %% Initialize DAQ and data logging
 if ~isDebug
@@ -68,6 +80,7 @@ isUserAbort = 0;
 % Make sure all buttons are released before continuing:
 while KbCheck
 end
+outputSingleScan(camControl,[1 1 0]) % LEDs on.
 
 nCond = numel(settings.motorPositionName);
 ticFrame = tic;
@@ -89,6 +102,9 @@ for iRep = 1:settings.nRepeats
         isAudio = condHere==nCond && strcmp(settings.motorPositionName{condHere}, 'audio');
         
         if isAudio
+            if audioObject.isplaying
+                stop(audioObject)
+            end
             play(audioObject)
         else
             fwrite(arduinoSerialObject, condHere, 'uint8')
