@@ -1,8 +1,20 @@
 %% Load data:
-p = '\\intrinsicScope\D\Data\Matthias';
-% p = 'E:\scratch\MM102_retino';
-load(fullfile(p, '20160907_203252_retinotopy_MM102_results160912.mat'));
-meta = load(fullfile(p, '20160907_203252_retinotopy_MM102.mat'));
+% p = '\\research.files.med.harvard.edu\Neurobio\HarveyLab\Matthias\data\imaging\widefield\MM103\MM103_161001_retino';
+% p = '\\intrinsicScope\D\Data\Matthias\MM105';
+% p = '\\research.files.med.harvard.edu\Neurobio\HarveyLab\Matthias\data\imaging\widefield\MM104\MM104_161001_retino';
+% p = '\\research.files.med.harvard.edu\Neurobio\HarveyLab\Matthias\data\imaging\widefield\MM110\MM110_160918_retino';
+p = '\\research.files.med.harvard.edu\Neurobio\HarveyLab\Matthias\data\imaging\widefield\MM105\MM105_161017_retino';
+% p = '\\research.files.med.harvard.edu\Neurobio\HarveyLab\Matthias\data\imaging\widefield\MM102\MM102_161011_retino';
+% p = 'T:\';
+% load(fullfile(p, '20160907_203252_retinotopy_MM102_resultsManualGoodMc.mat'));
+% meta = load(fullfile(p, '20161011_182641_retinotopy_MM102.mat'));
+% load(fullfile(p, '20160918_185914_retinotopy_MM111_results160919.mat'));
+% meta = load(fullfile(p, '20160918_185914_retinotopy_MM111.mat'));
+load(fullfile(p, '20161017_185611_retinotopy_MM105_results161018.mat'));
+meta = load(fullfile(p, '20161017_185611_retinotopy_MM105.mat'));
+
+warning('consider excluding the bins in which the mouse can''t see the bar anymore')
+
 % p = 'T:\ltt\';
 % load(fullfile(p, '20160719_133126_retinotopy_lightTightTest_results160719.mat'));
 % meta = load(fullfile(p, '20160719_133126_retinotopy_lightTightTest.mat'));
@@ -21,6 +33,11 @@ conds = unique(meta.frame.past.barDirection_deg);
 for i = 1:nCond
     results(i).tuningCorr = results(i).tuning;
     
+    % Normalize by ninbin (the online analysis does not do this automatically):
+    nrm = permute(nanRep(1./results(i).nInBin(:), 0), [2, 3, 1]);
+    nrm(~isfinite(nrm)) = 0;
+    results(i).tuningCorr = bsxfun(@times, results(i).tuningCorr, nrm);
+    
     if isBarPositionSignIncorrect && (conds(i)==90 || conds(i)==180)
         results(i).tuningCorr = results(i).tuningCorr(:,:,end:-1:1);
     end
@@ -28,41 +45,19 @@ for i = 1:nCond
     results(i).isGoodFrame = results(i).nInBin>0;
 end
 
-% for i = 1:nCond
-%     for ii = 1:size(results(i).tuning, 3)
-%         % Normalize by each frame's brightness:
-%         results(i).tuningCorr(:,:,ii) = results(i).tuningCorr(:,:,ii) ...
-%             ./ mean(col(results(i).tuningCorr(:,:,ii).*isV1));
-%         
-%         % Apply smoothing:
-% %         results(i).tuningCorr(:,:,ii) = imgaussfilt(results(i).tuningCorr(:,:,ii), 10);
-%     end
-% end
+for i = 1:nCond
+    for ii = 1:size(results(i).tuning, 3)
+        % Apply smoothing:
+%         results(i).tuningCorr(:,:,ii) = imgaussfilt(results(i).tuningCorr(:,:,ii), 5);
+    end
+end
 
 for i = 1:nCond
-    % Subtract out screen light contamination (improve that!):
-%     mnScreenCont = zeros(2, 2, size(results(i).tuningCorr, 3));
-%     mnScreenCont(1, 1, :) = mean(mean(results(i).tuningCorr(1:50, 1:50, :), 1), 2);
-%     mnScreenCont(1, 2, :) = mean(mean(results(i).tuningCorr(1:50, end-51:end, :), 1), 2);
-%     mnScreenCont(2, 1, :) = mean(mean(results(i).tuningCorr(end-51:end, 1:50, :), 1), 2);
-%     mnScreenCont(2, 2, :) = mean(mean(results(i).tuningCorr(end-51:end, end-51:end, :), 1), 2);
-%     mnScreenContFull = zeros(size(results(i).tuningCorr));
-%     for ii = 1:size(results(i).tuningCorr, 3)
-%         mnScreenContFull(:,:,ii) = imresize(mnScreenCont(:,:,ii), ...
-%             [size(results(i).tuningCorr, 1), size(results(i).tuningCorr, 2)]);
-%     end
-%     
-%     results(i).tuningCorr = results(i).tuningCorr - mnScreenContFull;
-
-    mnScreenContam = mean(mean(results(i).tuningCorr(1:200, :, :), 1), 2);
-    results(i).tuningCorr = bsxfun(@minus, results(i).tuningCorr, mnScreenContam);
-    
-    % Calculate dR:
-%     mn = mean(results(i).tuningCorr(:,:,results(i).isGoodFrame), 3);
-%     results(i).tuningCorr = bsxfun(@minus, results(i).tuningCorr, mn);
     
     % Get FFT at first non-DC frequency:
     tmp = fft(results(i).tuningCorr(:,:,results(i).isGoodFrame), [], 3);
+%     tmp = fft(results(i).tuningCorr, [], 3);
+
     % We multiply by -1 to rotate the complex angle by 180 deg so that the
     % center of the trial (center of visual field) corresponds to zero
     % angle:
@@ -77,10 +72,17 @@ for i = 1:2
 end
 
 %% Play movies for visual inspection:
+
 for i = 1:nCond
-    ijPlay(...
-        bsxfun(@minus, results(i).tuningCorr(:,:,results(i).isGoodFrame), ...
-        mean(results(i).tuningCorr(:,:,results(i).isGoodFrame), 3)), ...
+%     movHere = results(i).tuning(:,:,results(i).isGoodFrame);
+    movHere = results(i).tuningCorr(:,:,results(i).isGoodFrame);
+    
+%     normalizer = mean(mean(movHere(1:100, 1:100, :), 1), 2);
+%     movHere = bsxfun(@rdivide, movHere, normalizer);
+%     movHere = movHere(:,:,results(i).isGoodFrame);
+%     movHere = bsxfun(@times, movHere, ~isVessel);
+    movHere = bsxfun(@minus, movHere, median(movHere, 3));
+    ijPlay(movHere, ...
         sprintf('Condition %d', i));
 end
 
@@ -116,6 +118,7 @@ title('Vertical mean (more positive = higher altitude)')
 colorbar
 
 subplot(2, 3, 5);
+
 % meanHori = wrapToPi((angle(results(2).fft)+angle(results(4).fft))/2);
 meanHori = wrapToPi(angle(results(2+2*isBackwards).fft));
 imagesc(meanHori, [-pi pi])
@@ -131,30 +134,53 @@ powerCombined = abs(results(1).fft) ...
     + abs(results(2).fft) ...
     + abs(results(4).fft);
 imagesc(powerCombined, prctile(powerCombined(:), [0.5 99.5]))
+% imagesc(powerCombined, [0 3000])
 colormap(gca, jet)
 axis equal
 title('Combined power')
 
+%%%
+% rotd = 0;
+% rotd = rotd-10; % Use this to find the perfect rotation angle to remove
+% discontinuities.
+rotd = 0;
+
+rot = complex(cosd(rotd), sind(rotd));
+meanVertiGrad = wrapToPi((angle(results(1).fft*rot)+angle(results(3).fft*rot))/2);
+meanHoriGrad = wrapToPi((angle(results(2).fft*rot)+angle(results(4).fft*rot))/2);
+
+% Single condition:
+% meanVertiGrad = wrapToPi((angle(results(1+2*isBackwards).fft*rot)+angle(results(3).fft*rot))/2);
+% meanHoriGrad = wrapToPi((angle(results(2+2*isBackwards).fft*rot)+angle(results(4).fft*rot))/2);
+
 subplot(2, 3, 6);
 smoothRad = 5;
-[~, Gdir1] = imgradient(imgaussfilt(meanVerti, smoothRad));
-[~, Gdir2] = imgradient(imgaussfilt(meanHori, smoothRad));
+[Gmag, Gdir1] = imgradient(imgaussfilt(meanVertiGrad, smoothRad));
+[~, Gdir2] = imgradient(imgaussfilt(meanHoriGrad, smoothRad));
 fieldSign = sind(Gdir1 - Gdir2);
-imagesc(imgaussfilt(fieldSign, smoothRad))
+fs = imgaussfilt(fieldSign, smoothRad);
+fs = fs .* powerCombined;
+imagesc(fs, [-1 1] .* prctile(abs(fs(:)), 95))
 colormap(gca, jet)
 title('Field sign')
 axis equal
 
+return
+
 %% Save field sign:
 p = '\\research.files.med.harvard.edu\Neurobio\HarveyLab\Matthias\data\imaging\widefield\MM102\map';
-n = 'MM102_160902_overview';
-imwrite(ceil(mat2gray(imgaussfilt(fieldSign, smoothRad))*255), jet(255), fullfile(p, [n '_fieldsign.png']))
+n = '20161011_182641_retinotopy_MM102';
+imwrite(ceil(mat2gray(fs, [-1 1] .* prctile(abs(fs(:)), 95))*255), jet(255), fullfile(p, [n '_fieldsign.png']))
 
 %% Get delay:
-% subplot(2, 3, 6);
-% h = impoly;
-% isV1 = createMask(h);
-% delay = angle(median(results(2).subt(isV1)))/2;
+if false
+    subplot(2, 3, 6);
+    h = impoly;
+    isV1 = createMask(h);
+    delay = angle(median(results(2).subt(isV1)))/2;
+end
+
+delay = 0;
 
 for i = 1:2
     results(i).angleNoDelay = angle(results(i).fft) - delay ;
@@ -164,7 +190,7 @@ for i = 3:4
     results(i).angleNoDelay = angle(results(i).fft) - delay;
 end
 
-%% Plot after subtracting delay:
+% Plot after subtracting delay:
 % figure(11101)
 % imagesc(wrapToPi(results(2).angleNoDelay), [-pi pi])
 % colormap(hsv)
