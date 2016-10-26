@@ -1,5 +1,4 @@
 function retinotopySpherical
-
 % error('get timing prediction right')
 % error('Cover left eye!')
 % error('Ensure that right eye can only see screen, no reflections')
@@ -18,21 +17,28 @@ folderName = [settings.mouseName, '_', ...
     '_retino'];
 settings.saveDir = fullfile('\\research.files.med.harvard.edu\neurobio\HarveyLab\Matthias\data\imaging\widefield', ...
     settings.mouseName, folderName);
+clipboard('copy', fullfile(settings.saveDir, 'mov'));
 if ~exist(settings.saveDir, 'dir')
     mkdir(settings.saveDir)
+    mkdir(fullfile(settings.saveDir, 'mov'))
 end
 
 % 10 reps was not enough with transgenic. Try 20.
 settings.nRepeats = 50; % How often each direction is repeated, i.e. there will be 4 times as many sweeps. Garrett uses 6-10 times 10, so up to 100 sweeps!
 settings.nRepeatsPerBlock = 6;
-settings.barWidth_deg = 10; % Marshel uses 20
-settings.barSpeed_dps = 10; % Marshel uses 8.5-9.5 dps
-settings.checkerBlink_hz = 6; % Marshel uses 6 Hz
-settings.minDistEyeToScreen_mm = 130;
-settings.screenOri_xyPix = [-96, 47];
+settings.barWidth_deg = 7; % Marshel uses 20
+settings.barSpeed_dps = 7; % Marshel uses 8.5-9.5 dps
+settings.checkerBlink_hz = 3; % Marshel uses 6 Hz
+settings.minDistEyeToScreen_mm = 150;
+settings.screenOri_xyPix = [-183, 45];
 settings.pixelReductionFactor = 5; % How much the texture is downsampled...affects frame rate.
 settings.fpsStim = 60; % Target display/acquisition rate. Max is 120 Hz (monitor refresh)
-settings.camFrameStride = 2; % The camera takes one picture every this many frames.
+settings.camFrameStride = 1; % The camera takes one picture every this many frames.
+settings.isBlueMonitorChannelOnly = false;
+settings.isSessionRunning = true;
+
+saveFileName = fullfile(settings.saveDir, ...
+    [datestr(now, 'yyyymmdd_HHMMSS'), '_retinotopy_', settings.mouseName]);
 
 % Empirical duration:
 screenWidthDegTheoretical = 132.7;
@@ -40,7 +46,7 @@ screenHeightDegTheoretical = 104.5;
 expDur = settings.nRepeats * ...
     4 * ... % Number of conditions/bar directions
     (screenWidthDegTheoretical+screenHeightDegTheoretical)*0.5/settings.barSpeed_dps;
-button = questdlg(sprintf('Experiment will take about %1.1f minutes. Start video recording, then click YES to start.', ...
+button = questdlg(sprintf('Experiment will take about %1.1f minutes. Start video recording (dir is in clipboard), then click YES to start.', ...
     expDur/60));
 if ~strcmp(button, 'Yes')
     return
@@ -60,7 +66,7 @@ if false
     end
 end
 
-%% Take snapshot of code file so that it can be reconstructed later:
+%% Take snapshot of taskScheduleFun so that it can be reconstructed later:
 % (display with fprintf('%s', sn.meta.fileTaskSchedule);
 fid = fopen([mfilename('fullpath'), '.m'], 'rt');
 settings.experimentCodeFile = fread(fid, inf, '*char');
@@ -97,7 +103,6 @@ frameStruct.barDirection_deg = 0;
 frameStruct.barPosition_deg = 0;
 frame = eventSeries(frameStruct);
 
-saveMetadataFile(settings, frame)
 %% Screen Setup
 if isDebug
     Screen('Preference', 'SkipSyncTests', 2);
@@ -105,7 +110,7 @@ if isDebug
     oldPriority = Priority;
 else
     oldPriority = Priority(1);
-    blackOutWin = Screen('OpenWindow', 1, 0);
+%     blackOutWin = Screen('OpenWindow', 1, 0);
 end
 
 Screen('Preference', 'VisualDebugLevel', 1); % Suppress white intro screen.
@@ -116,7 +121,12 @@ screen.fullRect = Screen('Rect', screen.win);
 % Set alpha blending settings (for fading to black at the end of a trial).
 % GL_colormask = [0 1 1 0]; % RGBA mask to exclude red and green light.
 % Screen('BlendFunction', screen.win, GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_colormask);
-Screen('FillRect', screen.win, [0 0 127])
+
+if settings.isBlueMonitorChannelOnly
+    Screen('FillRect', screen.win, [0 0 127])
+else
+    Screen('FillRect', screen.win, 127)
+end
 Screen('Flip', screen.win);
 outputSingleScan(camControl,[1 1 0]) %LEDs on
 pause(5); % For luminance adaptation.
@@ -169,8 +179,10 @@ while (nRepeatsDone < settings.nRepeats) && ~isExit
             % Draw frame:
             [texMat, frame.next.barPosition_deg] = ...
                 makeSphericalBar(tex, settings, timeInCondition_s, frame.next.barDirection_deg);
-            texMat = repmat(texMat, 1, 1, 3);
-            texMat(:,:,1:2) = 0;
+            if settings.isBlueMonitorChannelOnly
+                texMat = repmat(texMat, 1, 1, 3);
+                texMat(:,:,1:2) = 0;
+            end
             texPtr = Screen('MakeTexture', screen.win, texMat);
             Screen('DrawTexture', screen.win, texPtr, [], screen.fullRect);
             
@@ -200,10 +212,8 @@ while (nRepeatsDone < settings.nRepeats) && ~isExit
             end
         end
         
-        % Save metadata after each block (for online analysis) (short pause
-        % after each block should be no problem, maybe good, to reduce
-        % aftereffect of last block):
-        saveMetadataFile(settings, frame)
+        % Save for online processing:
+        saveMetadata(settings, screen, frame, saveFileName)
         
         if isExit
             break
@@ -212,12 +222,9 @@ while (nRepeatsDone < settings.nRepeats) && ~isExit
 end
 
 %% Clean up
-
 % Save:
-saveMetadataFile(settings, frame, mfile)
-
-Priority(oldPriority);
-Screen('CloseAll');
+settings.isSessionRunning = false;
+saveMetadata(settings, screen, frame, saveFileName)
 
 if ~isDebug
     % Close DAQ:
@@ -225,14 +232,18 @@ if ~isDebug
     delete(camControl)
 end
 
-function saveMetadataFile(settings, frame)
-    if ~exist(settings.saveDir, 'dir')
-        mkdir(settings.saveDir);
-    end
-    saveFileName = fullfile(settings.saveDir, ...
-        [datestr(now, 'yyyymmdd_HHMMSS'), '_retinotopy_', settings.mouseName]);
 
-    save(saveFileName, 'settings', 'screen', 'frame', 'mfile')
-    fprintf('Retinotopy data saved at %s.\n', saveFileName)
+Priority(oldPriority);
+Screen('CloseAll');
 end
+
+function saveMetadata(settings, screen, frame, saveFileName)
+if ~exist(settings.saveDir, 'dir')
+    mkdir(settings.saveDir);
+end
+
+mfile = fileread(which(mfilename));
+save(saveFileName, 'settings', 'screen', 'frame', 'mfile')
+fprintf('Retinotopy data saved at %s.\n', saveFileName)
+
 end
