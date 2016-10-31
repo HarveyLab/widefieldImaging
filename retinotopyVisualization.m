@@ -3,15 +3,15 @@
 % p = '\\intrinsicScope\D\Data\Matthias\MM105';
 % p = '\\research.files.med.harvard.edu\Neurobio\HarveyLab\Matthias\data\imaging\widefield\MM104\MM104_161001_retino';
 % p = '\\research.files.med.harvard.edu\Neurobio\HarveyLab\Matthias\data\imaging\widefield\MM110\MM110_160918_retino';
-p = '\\research.files.med.harvard.edu\Neurobio\HarveyLab\Matthias\data\imaging\widefield\MM105\MM105_161017_retino';
+p = 'D:\Data\scratch\KB018\KB018_161028_retino\mov1_results';
 % p = '\\research.files.med.harvard.edu\Neurobio\HarveyLab\Matthias\data\imaging\widefield\MM102\MM102_161011_retino';
 % p = 'T:\';
 % load(fullfile(p, '20160907_203252_retinotopy_MM102_resultsManualGoodMc.mat'));
 % meta = load(fullfile(p, '20161011_182641_retinotopy_MM102.mat'));
 % load(fullfile(p, '20160918_185914_retinotopy_MM111_results160919.mat'));
 % meta = load(fullfile(p, '20160918_185914_retinotopy_MM111.mat'));
-load(fullfile(p, '20161017_185611_retinotopy_MM105_results161018.mat'));
-meta = load(fullfile(p, '20161017_185611_retinotopy_MM105.mat'));
+load(fullfile(p, '20161028_141023_retinotopy_KB018_results161028.mat'));
+meta = load(fullfile(p, '20161028_141023_retinotopy_KB018.mat'));
 
 warning('consider excluding the bins in which the mouse can''t see the bar anymore')
 
@@ -43,7 +43,18 @@ for i = 1:nCond
     end
     
     results(i).isGoodFrame = results(i).nInBin>0;
+    results(i).tuningCorr = results(i).tuningCorr(:,:,results(i).isGoodFrame);
 end
+
+% MM112:
+% results(1).tuningCorr = results(1).tuningCorr(:,:,4:29);
+% results(2).tuningCorr = results(2).tuningCorr(:,:,4:23);
+% results(3).tuningCorr = results(3).tuningCorr(:,:,2:21);
+% results(4).tuningCorr = results(4).tuningCorr(:,:,6:39);
+% results(1).tuningCorr = results(1).tuningCorr(:,:,2:31);
+% results(2).tuningCorr = results(2).tuningCorr(:,:,1:31);
+% results(3).tuningCorr = results(3).tuningCorr(:,:,2:25);
+% results(4).tuningCorr = results(4).tuningCorr(:,:,2:61);
 
 for i = 1:nCond
     for ii = 1:size(results(i).tuning, 3)
@@ -55,8 +66,8 @@ end
 for i = 1:nCond
     
     % Get FFT at first non-DC frequency:
-    tmp = fft(results(i).tuningCorr(:,:,results(i).isGoodFrame), [], 3);
-%     tmp = fft(results(i).tuningCorr, [], 3);
+%     tmp = fft(results(i).tuningCorr(:,:,results(i).isGoodFrame), [], 3);
+    tmp = fft(results(i).tuningCorr, [], 3);
 
     % We multiply by -1 to rotate the complex angle by 180 deg so that the
     % center of the trial (center of visual field) corresponds to zero
@@ -73,9 +84,9 @@ end
 
 %% Play movies for visual inspection:
 
-for i = 1:nCond
+for i = 1:4
 %     movHere = results(i).tuning(:,:,results(i).isGoodFrame);
-    movHere = results(i).tuningCorr(:,:,results(i).isGoodFrame);
+    movHere = results(i).tuningCorr;
     
 %     normalizer = mean(mean(movHere(1:100, 1:100, :), 1), 2);
 %     movHere = bsxfun(@rdivide, movHere, normalizer);
@@ -98,34 +109,33 @@ imagesc(wrapToPi(angle(results(1+2*isBackwards).fft)), [-pi pi])
 colormap(gca, jet)
 colorbar
 axis equal
-title('Vertical single condition')
+title('Vertical condition 1')
 
 subplot(2, 3, 4);
 imagesc(-wrapToPi(angle(results(2+2*isBackwards).fft)), [-pi pi])
 colormap(gca, jet)
 colorbar
 axis equal
-title('Horizontal single condition')
+title('Horizontal condition 1')
 
 subplot(2, 3, 2);
 % meanVerti = wrapToPi((angle(results(1).fft)+angle(results(3).fft))/2);
-meanVerti = wrapToPi(angle(results(1+2*isBackwards).fft));
+meanVerti = wrapToPi(angle(results(3).fft));
 imagesc(meanVerti, [-pi pi])
 colormap(gca, jet)
 colorbar
 axis equal
-title('Vertical mean (more positive = higher altitude)')
+title('Vertical condition 2 (more positive = higher altitude)')
 colorbar
 
 subplot(2, 3, 5);
-
 % meanHori = wrapToPi((angle(results(2).fft)+angle(results(4).fft))/2);
-meanHori = wrapToPi(angle(results(2+2*isBackwards).fft));
+meanHori = -wrapToPi(angle(results(4).fft));
 imagesc(meanHori, [-pi pi])
 colormap(gca, jet)
 colorbar
 axis equal
-title('Horizontal mean (more positive = more temporal)')
+title('Horizontal condition 2 (more positive = more temporal)')
 colorbar
 
 subplot(2, 3, 3);
@@ -139,22 +149,24 @@ colormap(gca, jet)
 axis equal
 title('Combined power')
 
-%%%
+%%
 % rotd = 0;
-% rotd = rotd-10; % Use this to find the perfect rotation angle to remove
+% rotd = rotd+10; % Use this to find the perfect rotation angle to remove
 % discontinuities.
-rotd = 0;
+rotd = 180;
+
 
 rot = complex(cosd(rotd), sind(rotd));
 meanVertiGrad = wrapToPi((angle(results(1).fft*rot)+angle(results(3).fft*rot))/2);
-meanHoriGrad = wrapToPi((angle(results(2).fft*rot)+angle(results(4).fft*rot))/2);
+meanHoriGrad = wrapToPi((angle(results(3).fft*rot)+angle(results(4).fft*rot))/2);
 
 % Single condition:
-% meanVertiGrad = wrapToPi((angle(results(1+2*isBackwards).fft*rot)+angle(results(3).fft*rot))/2);
-% meanHoriGrad = wrapToPi((angle(results(2+2*isBackwards).fft*rot)+angle(results(4).fft*rot))/2);
+% isBackwards=1;
+% meanVertiGrad = wrapToPi(angle(results(1+2*isBackwards).fft*rot));
+% meanHoriGrad = wrapToPi(angle(results(2+2*isBackwards).fft*rot));
 
 subplot(2, 3, 6);
-smoothRad = 5;
+smoothRad = 2.5;
 [Gmag, Gdir1] = imgradient(imgaussfilt(meanVertiGrad, smoothRad));
 [~, Gdir2] = imgradient(imgaussfilt(meanHoriGrad, smoothRad));
 fieldSign = sind(Gdir1 - Gdir2);
@@ -168,8 +180,8 @@ axis equal
 return
 
 %% Save field sign:
-p = '\\research.files.med.harvard.edu\Neurobio\HarveyLab\Matthias\data\imaging\widefield\MM102\map';
-n = '20161011_182641_retinotopy_MM102';
+p = '\\research.files.med.harvard.edu\Neurobio\HarveyLab\Matthias\data\imaging\widefield\MM112\map';
+n = '20161026_164532_retinotopy_MM112';
 imwrite(ceil(mat2gray(fs, [-1 1] .* prctile(abs(fs(:)), 95))*255), jet(255), fullfile(p, [n '_fieldsign.png']))
 
 %% Get delay:
@@ -181,13 +193,14 @@ if false
 end
 
 delay = 0;
+% delay = delay+0.1;
 
 for i = 1:2
-    results(i).angleNoDelay = angle(results(i).fft) - delay ;
+    results(i).angleNoDelay = angle(results(i).fft*rot) - delay ;
 end
 
 for i = 3:4
-    results(i).angleNoDelay = angle(results(i).fft) - delay;
+    results(i).angleNoDelay = angle(results(i).fft*rot) - delay;
 end
 
 % Plot after subtracting delay:
@@ -196,29 +209,32 @@ end
 % colormap(hsv)
 % axis equal
 
-subplot(2, 3, 2);
-meanHori = wrapToPi((results(1).angleNoDelay+results(3).angleNoDelay)/2);
-imagesc(meanHori, [-pi pi]/1.5)
-colormap(gca, jet)
-title('Vertical mean (more positive = higher altitude)')
-colorbar
-axis equal
+% subplot(2, 3, 2);
+meanVerti = wrapToPi(angle(results(1).fft+results(3).fft)/2);
+% meanVerti = wrapToPi(results(3).angleNoDelay);
+% imagesc(meanVerti, [-pi pi]/1.5)
+% colormap(gca, jet)
+% title('Vertical mean (more positive = higher altitude)')
+% colorbar
+% axis equal
 
-subplot(2, 3, 5);
-meanVerti = wrapToPi((results(2).angleNoDelay+results(4).angleNoDelay)/2);
-imagesc(meanVerti, [-pi pi]/1.5)
-colormap(gca, jet)
-title('Horizontal mean (more positive = more temporal)')
-colorbar
-axis equal
+% subplot(2, 3, 5);
+meanHori = wrapToPi((results(2).angleNoDelay+results(4).angleNoDelay)/2);
+% meanHori = wrapToPi(results(4).angleNoDelay);
+% imagesc(meanHori, [-pi pi]/1.5)
+% colormap(gca, jet)
+% title('Horizontal mean (more positive = more temporal)')
+% colorbar
+% axis equal
 
-% Note: Field sign is not affected by subtractind delay.
+% Note: Field sign is not affected by subtractind delay except for shift of discontinuity..
 subplot(2, 3, 6);
 [~, Gdir1] = imgradient(imgaussfilt(meanVerti, smoothRad));
 [~, Gdir2] = imgradient(imgaussfilt(meanHori, smoothRad));
-fieldSign = sind(Gdir2 - Gdir1);
-fieldSign = imgaussfilt(fieldSign, smoothRad);
-imagesc(fieldSign)
+fieldSign = sind(Gdir1 - Gdir2);
+fs = imgaussfilt(fieldSign, smoothRad);
+fs = fs .* powerCombined;
+imagesc(fs, [-1 1] .* prctile(abs(fs(:)), 95))
 colormap(gca, jet)
 title('Field sign')
 axis equal

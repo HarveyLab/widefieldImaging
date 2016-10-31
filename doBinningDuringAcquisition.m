@@ -2,7 +2,7 @@ function doBinningDuringAcquisition(tiffFolder)
 
 % For debugging:
 if nargin<1
-    tiffFolder = 'T:\MM111';
+    tiffFolder = 'E:\scratch\test\raw';
 end
 
 % How to run this in a separate instance:
@@ -12,11 +12,15 @@ end
     
 % Settings:
 nBinTemp = 2;
-nBinSpat = 4;
+nBinSpat = 2;
     
 % Create folder for binned data:
 % outFolder = fullfile(tiffFolder, 'binned');
-outFolder = ['D' tiffFolder(2:end)];
+if nargin<1 % Debug
+    outFolder = 'E:\scratch\test\binned';
+else
+    outFolder = ['D' tiffFolder(2:end)];
+end
 mkdir(outFolder);
 
 % Load first frame to get basic info:
