@@ -15,7 +15,8 @@ nBinTemp = 2;
 nBinSpat = 4;
     
 % Create folder for binned data:
-outFolder = fullfile(tiffFolder, 'binned');
+% outFolder = fullfile(tiffFolder, 'binned');
+outFolder = ['D' tiffFolder(2:end)];
 mkdir(outFolder);
 
 % Load first frame to get basic info:
@@ -52,7 +53,8 @@ while ~isExitLoop
     timeIo = 0;
     
     % Wait for new files:
-    if nFilesAvailable < nBinTemp
+    if nFilesAvailable < (2*nBinTemp+100)
+        disp('Waiting for new frames...')
         if toc(ticLastFileLoaded) > 180
             break
         else
@@ -80,12 +82,12 @@ while ~isExitLoop
             imgOut = imgOut + double(rtifc(rtifcArgStruct));
             filesToDelete{modMax(nextFrameId, nOutBuf*nBinTemp)} = imgFullNameHere;
             timeIo = timeIo + toc(ticLoad);
-            fprint('Loaded file %s\n', imgFileNameHere);
+            fprintf('Loaded file %s\n', imgFileNameHere);
         catch err
             switch err.identifier
                 case {'MATLAB:imagesci:imread:fileDoesNotExist', ...
                         'MATLAB:imagesci:tiffmexutils:libtiffError'}
-                    fprint('File %s does not exist. Exiting.\n', imgFileNameHere);
+                    fprintf('File %s does not exist. Exiting.\n', imgFileNameHere);
                     isExitLoop = true;
                     break
                 otherwise
@@ -114,25 +116,25 @@ while ~isExitLoop
         save(fullfile(outFolder, imgFileNameHere(1:(end-nImgFileExt))), ...
             'imgOutBuffer', '-v7.3')
         timeIo = timeIo + toc(ticSave);
-        fprint('Saved file %s\n', imgFileNameHere);
+        fprintf('Saved file %s\n', imgFileNameHere);
         
-        delete(filesToDelete)
-        filesToDelete = {};
-        fprint('Deleted files up to %s\n', imgFileNameHere);
+%         delete(filesToDelete{:})
+%         filesToDelete = {};
+%         fprintf('Deleted files up to %s\n', imgFileNameHere);
         
         if isHeadless
             % In headless mode, printing to console is slow, so only do it
             % once per chunk:
-            fprint('Loop time: %1.2f ms (%1.2f ms proc, %1.2f ms I/O).\n\n', ...
+            fprintf('Loop time: %1.2f ms (%1.2f ms proc, %1.2f ms I/O).\n\n', ...
             timeFullLoop*1e3, (timeFullLoop-timeIo)*1e3, timeIo*1e3);
         end
     end
     
     % Display timing:
-    if ~isHeadless
-        fprint('Loop time: %1.2f ms (%1.2f ms proc, %1.2f ms I/O).\n\n', ...
-            timeFullLoop*1e3, (timeFullLoop-timeIo)*1e3, timeIo*1e3);
-    end
+%     if ~isHeadless
+%         fprintf('Loop time: %1.2f ms (%1.2f ms proc, %1.2f ms I/O).\n\n', ...
+%             timeFullLoop*1e3, (timeFullLoop-timeIo)*1e3, timeIo*1e3);
+%     end
 end
 
 % Save last chunk if it was not evenly dividible by nOutBuf:
