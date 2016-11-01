@@ -12,7 +12,7 @@ end
     
 % Settings:
 nBinTemp = 2;
-nBinSpat = 2;
+nBinSpat = 4;
     
 % Create folder for binned data:
 % outFolder = fullfile(tiffFolder, 'binned');
@@ -27,6 +27,7 @@ mkdir(outFolder);
 tiffFileMask = fullfile(tiffFolder, '*.tiff');
 ls = dir(tiffFileMask);
 while isempty(ls)
+    disp('Waiting for first frame...')
     pause(1)
     ls = dir(tiffFileMask);
 end
