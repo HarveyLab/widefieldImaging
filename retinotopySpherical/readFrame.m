@@ -1,12 +1,12 @@
 function img = readFrame(iFrame, movFolder, lst, isPreprocessed, nBinTemp)
 % img = readFrame(iFrame, movFolder, lst, isPreprocessed) - Read frame,
-% either from tiff file, or from a pre-processed 
+% either from tiff file, or from a pre-processed
 
 if nargin < 5
     nBinTemp = 1;
 end
 
-persistent dat
+persistent dat map
 
 if isPreprocessed
     if ~isfield(dat, 'lst') || ~isequal(dat.lst, lst)
@@ -45,28 +45,38 @@ if isPreprocessed
     if iInFile <= dat.size(3)
         img = dat.mov(:,:,iInFile);
     else
-        fprintf('Could not find frame %d. End of movie?\n');
+        fprintf('Could not find frame %d. End of movie?\n', iFrame);
         img = [];
         return
     end
 else
-    error('to do: make this compatible with tiff files')
-%     iFile = sum(dat.frame.past.isCamTriggerFrame(1:iFrame));
-%     fileNameHere = sprintf('%s%04.0f.tiff', movNamePrefix, iFile);
-%     fileNameHere = fullfile(movFolder, fileNameHere);
-%     
-%     if exist(fileNameHere, 'file')
-%         try
-%             %                 imgHere = double(imread(fileNameHere));
-%         catch
-%             break
-%         end
-%     else
-%         imgHere = nan; %#ok<NASGU> % Suppresses warning about non-existing variable in parfor loop.
-%         warning('Could not find file %s.\n This should not happen during online processing, but can happen at the end of an acquisition if the last frame was saved incompletely. Check what''s going on!', ...
-%             fileNameHere);
-%         break
+%     if mod(iFrame, 100)==1
+%         % Create file that indicates what the current frame is, for
+%         % prefetching:
+%         [fid, err] = fopen('T:\retinoMemmap2.bin', 'w');
+%         fwrite(fid, iFrame, 'double');
+%         fclose(fid);
 %     end
-%     
-%     img = imread(fullfile(movFolder, lst(iFrame).name));
+    
+    if iFrame <= numel(lst)
+        fileNameHere = fullfile(movFolder, lst(iFrame).name);
+        try
+            img = double(imread(fileNameHere));
+        catch err
+            switch err.identifier
+                case 'MATLAB:imagesci:imread:fileDoesNotExist'
+                    fileNameHere = '';
+                otherwise
+                    warning('Error while reading file. Entering debug mode.');
+                    keyboard
+            end
+        end
+    else
+        fileNameHere = '';
+    end
+    
+    if strcmp(fileNameHere, '')
+        fprintf('Could not find frame %d. End of movie?\n', iFrame);
+        img = [];
+    end
 end

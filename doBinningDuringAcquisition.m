@@ -12,14 +12,15 @@ end
     
 % Settings:
 nBinTemp = 2;
-nBinSpat = 4;
+nBinSpat = 2;
     
 % Create folder for binned data:
 % outFolder = fullfile(tiffFolder, 'binned');
 if nargin<1 % Debug
     outFolder = 'E:\scratch\test\binned';
 else
-    outFolder = ['D' tiffFolder(2:end)];
+%     outFolder = ['D' tiffFolder(2:end)];
+    outFolder = ['E:\scratch\intrinsicTest2\binned'];
 end
 mkdir(outFolder);
 
