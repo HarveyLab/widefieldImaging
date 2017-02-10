@@ -15,7 +15,7 @@ settings.mouseName = char(inputdlg('Enter mouse name:'));
 folderName = [settings.mouseName, '_', ...
     datestr(now, 'yymmdd'), ...
     '_retino'];
-settings.saveDir = fullfile('\\research.files.med.harvard.edu\neurobio\HarveyLab\Matthias\data\imaging\widefield', ...
+settings.saveDir = fullfile('Z:\HarveyLab\Matthias\data\imaging\widefield', ...
     settings.mouseName, folderName);
 clipboard('copy', fullfile(settings.saveDir, 'mov'));
 if ~exist(settings.saveDir, 'dir')
@@ -24,13 +24,14 @@ if ~exist(settings.saveDir, 'dir')
 end
 
 % 10 reps was not enough with transgenic. Try 20.
-settings.nRepeats = 50; % How often each direction is repeated, i.e. there will be 4 times as many sweeps. Garrett uses 6-10 times 10, so up to 100 sweeps!
+settings.nRepeats = 40; % How often each direction is repeated, i.e. there will be 4 times as many sweeps. Garrett uses 6-10 times 10, so up to 100 sweeps!
 settings.nRepeatsPerBlock = 6;
-settings.barWidth_deg = 7; % Marshel uses 20
+settings.barWidth_deg = 5; % Marshel uses 20
 settings.barSpeed_dps = 7; % Marshel uses 8.5-9.5 dps
+settings.checkerWidth_deg = 1/0.08;
 settings.checkerBlink_hz = 3; % Marshel uses 6 Hz
-settings.minDistEyeToScreen_mm = 150;
-settings.screenOri_xyPix = [-183, 45];
+settings.minDistEyeToScreen_mm = 115;
+settings.screenOri_xyPix = [-120, 76];
 settings.pixelReductionFactor = 5; % How much the texture is downsampled...affects frame rate.
 settings.fpsStim = 60; % Target display/acquisition rate. Max is 120 Hz (monitor refresh)
 settings.camFrameStride = 1; % The camera takes one picture every this many frames.
@@ -164,6 +165,13 @@ while (nRepeatsDone < settings.nRepeats) && ~isExit
         
         % Prepare texture and timers:
         tex = prepareSphericalBarTex(screen, settings, frame.next.barDirection_deg);
+        
+        % Add offscreen space so that there is a pause between when the bar
+        % arrives at one edge of the screen and when it appears again on
+        % the other edge. During this pause, the neural signal can decay,
+        % so that we don't get a spillover from the last to the first bin.
+        tex.altLimits_deg = tex.altLimits_deg + [-1 1]*settings.barSpeed_dps;
+        
         repeatDuration_s = range(tex.altLimits_deg)/settings.barSpeed_dps;
         disp(repeatDuration_s)
         if frame.next.frameId == 0
@@ -179,6 +187,7 @@ while (nRepeatsDone < settings.nRepeats) && ~isExit
             % Draw frame:
             [texMat, frame.next.barPosition_deg] = ...
                 makeSphericalBar(tex, settings, timeInCondition_s, frame.next.barDirection_deg);
+                        
             if settings.isBlueMonitorChannelOnly
                 texMat = repmat(texMat, 1, 1, 3);
                 texMat(:,:,1:2) = 0;
