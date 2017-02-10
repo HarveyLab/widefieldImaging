@@ -1,18 +1,17 @@
 function dat = mjlmRetinotopyAnalysisOnline
 
 warning('Remember to start prefetching function in a separate Matlab instance.')
+warning('Remember to set dbstop if error! Saving might fail!.')
 
 %% Settings:
-mouseName = 'MM111';
-dateStr = '161219';
+mouseName = 'MM107';
+dateStr = '170209';
 nBinTemp = 1; % How much movie was binned during preprocessing.
 
-% widefieldBase = 'D:\Data\scratch\';
-% widefieldBase = 'C:\scratch\';
-widefieldBase = '\\research.files.med.harvard.edu\Neurobio\HarveyLab\Matthias\data\imaging\widefield';
+% widefieldBase = '\\research.files.med.harvard.edu\Neurobio\HarveyLab\Matthias\data\imaging\widefield';
+widefieldBase = '\\intrinsicScope\E\Data\Matthias';
 datFolder = fullfile(widefieldBase, mouseName, [mouseName '_' dateStr '_retino']);
 movFolder = fullfile(datFolder, 'mov');
-% movFolder = '\\intrinsicScope\D\Data\Matthias\MM106';
 
 ls = dir(fullfile(datFolder, ['*_retinotopy_' mouseName '.mat']));
 if numel(ls) ~=1
@@ -45,10 +44,12 @@ for i = 1:nFiles
 end
 
 cstr = regexp({lst.name}, '(?<=_)()\d+(?=\.)', 'match', 'once');
+cstr(strcmp(cstr, '')) = [];
 fileNameNumber = sscanf(sprintf('%s,', cstr{:}), '%d,');
-    
+
 [~, order] = sort(fileNameNumber);
 lst = lst(order);
+assert(~isempty(lst))
 
 % img = imread(fullfile(movFolder, lst(1).name));
 img = readFrame(1, movFolder, lst, isPreprocessed, nBinTemp);
@@ -60,7 +61,7 @@ lowPassFilterSd = dat.mov.height/5;
 % dat.mov.nFramesCam = numel(lst);
 % dat.mov.nPixPerFrame = dat.mov.height * dat.mov.width;
 temporalDownSampling = 1;
-% 
+%
 % % There is sometimes an additional frame in the end, which is black, so
 % % it's OK to have one extra frame.
 % assert(abs(sum(dat.frame.past.isCamTriggerFrame)-dat.mov.nFramesCam)<=1, ...
@@ -140,7 +141,7 @@ for iCond = 1:nCond
     nFramesProcessedThisCond = 0;
     ticStartThisCond = tic;
     isOnline = isfield(dat.settings, 'isSessionRunning') && dat.settings.isSessionRunning;
-
+    
     % Processing loop:
     while true
         iFrame = iFrame + 1;
@@ -205,22 +206,24 @@ for iCond = 1:nCond
         % Load frame:
         iFile = sum(isCamTriggerFrame(1:iFrame));
         imgHere = readFrame(iFile/nBinTemp, movFolder, lst, isPreprocessed, nBinTemp);
-
+        
         % When there are no more files, readFrame returns an empty array:
         if isempty(imgHere)
             break
         end
-                 
+        
         % Spatial high-pass filter with large kernel to remove global
         % fluctuations (do this before motion correction so that black
         % edges do not corrupt filtering):
         imgHereGpu = gpuArray(double(imgHere));
-%         imgHereGpu = imgHere;
+        %         imgHereGpu = imgHere;
         % DON'T SUBTRACT LOWPASS! The maps are smoother without
         % subtracting, even if the movies look worse.
-%         imgHereGpu = imgHereGpu ./ imgaussfilt(imgHereGpu, lowPassFilterSd, 'pad', 'symm');
-
+        %         imgHereGpu = imgHereGpu ./ imgaussfilt(imgHereGpu, lowPassFilterSd, 'pad', 'symm');
+        
         % Subtract median to reduce the impact of individual bright frames:
+        % (Don't do this in mice with viral expression, to keep pixels
+        % independent across space.)
         imgHereGpu = imgHereGpu ./ median(imgHereGpu(:));
         
         % Correct motion:
@@ -229,7 +232,7 @@ for iCond = 1:nCond
             correct_translation_singleframe(imgHereMc, ...
             ref_fft, 1, imgHereGpu);
         imgHere = double(gather(imgHereGpu));
-%         imgHere = imgHereGpu;
+        %         imgHere = imgHereGpu;
         
         % Ignore frames that have extreme shifts:
         if abs(results(iCond).xShift(iFrame)) > 10 || ...
@@ -255,17 +258,17 @@ for iCond = 1:nCond
         
         nFramesProcessedThisCond = nFramesProcessedThisCond+1;
         
-        if ~mod(nFramesProcessedThisCond, 1000)    
+        if ~mod(nFramesProcessedThisCond, 1000)
             try
-            tuningHere = bsxfun(@rdivide, results(iCond).tuning, ...
-                permute(results(iCond).nInBin(:), [3 2 1]));
-            isGoodFrame = results(iCond).nInBin > 0;
-            tuningHere = tuningHere(:,:,isGoodFrame);
-            tuningHere = tuningHere-mean(tuningHere, 3);
-            tuningHere = min(max(tuningHere, -5000), 5000);
-            tiffWrite(mat2gray(tuningHere)*2^16, ...
-                sprintf('tuning_cond%d.tif', ...
-                iCond), 'T:\');
+                tuningHere = bsxfun(@rdivide, results(iCond).tuning, ...
+                    permute(results(iCond).nInBin(:), [3 2 1]));
+                isGoodFrame = results(iCond).nInBin > 0;
+                tuningHere = tuningHere(:,:,isGoodFrame);
+                tuningHere = tuningHere-mean(tuningHere, 3);
+                tuningHere = min(max(tuningHere, -5000), 5000);
+                tiffWrite(mat2gray(tuningHere)*2^16, ...
+                    sprintf('tuning_cond%d.tif', ...
+                    iCond), 'T:\');
             catch err
                 warning('Error while saving intermediate result:\n%s', ...
                     err.message)
@@ -273,11 +276,11 @@ for iCond = 1:nCond
             
             % For debugging, store intermediate 1000 frame blocks:
             
-%             tiffWrite(mat2gray(tuningHere)*2^16, ...
-%                 sprintf('tuning_cond%d_block%d.tif', ...
-%                 iCond, nFramesProcessedThisCond/1000), 'T:\');
-%             results(iCond).tuning = results(iCond).tuning.*0;
-%             results(iCond).nInBin = results(iCond).nInBin.*0;
+            %             tiffWrite(mat2gray(tuningHere)*2^16, ...
+            %                 sprintf('tuning_cond%d_block%d.tif', ...
+            %                 iCond, nFramesProcessedThisCond/1000), 'T:\');
+            %             results(iCond).tuning = results(iCond).tuning.*0;
+            %             results(iCond).nInBin = results(iCond).nInBin.*0;
             
         end
     end
@@ -290,6 +293,10 @@ end
 f = sprintf('%s_results%s', f, datestr(now, 'yymmdd'));
 dat = load(datFile);
 dat.results = results;
-save(fullfile(p, f), '-struct', 'dat');
+try
+    save(fullfile(p, f), '-struct', 'dat');
+catch err
+    throwAsWarning(err)
+end
 
 % keyboard

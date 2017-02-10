@@ -1,7 +1,8 @@
 %% Load data:
 pBase = '\\research.files.med.harvard.edu\Neurobio\HarveyLab\Matthias\data\imaging\widefield\';
-mouse = 'KB019';
+mouse = 'MM107';
 ls = dir(fullfile(pBase, mouse, [mouse '_*']));
+ls = ls([ls.isdir]);
 
 % Take most recent version of all files:
 pAcq = fullfile(pBase, mouse, ls(end).name); 
@@ -9,6 +10,7 @@ lsDat = dir(fullfile(pAcq, ['*' mouse '.mat']));
 lsResult = dir(fullfile(pAcq, ['*' mouse '*_results*.mat']));
 meta = load(fullfile(pAcq, lsDat(end).name));
 load(fullfile(pAcq, lsResult(end).name));
+fprintf('Loaded %s.\n', lsResult(end).name);
 
 % Check if bar position record is incorrect, i.e. flipped for 90 and 180
 % degrees (this happened because I didn't take into account a rotation

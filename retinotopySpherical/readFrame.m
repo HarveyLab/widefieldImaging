@@ -6,7 +6,7 @@ if nargin < 5
     nBinTemp = 1;
 end
 
-persistent dat map
+persistent dat
 
 if isPreprocessed
     if ~isfield(dat, 'lst') || ~isequal(dat.lst, lst)
@@ -50,14 +50,6 @@ if isPreprocessed
         return
     end
 else
-%     if mod(iFrame, 100)==1
-%         % Create file that indicates what the current frame is, for
-%         % prefetching:
-%         [fid, err] = fopen('T:\retinoMemmap2.bin', 'w');
-%         fwrite(fid, iFrame, 'double');
-%         fclose(fid);
-%     end
-    
     if iFrame <= numel(lst)
         fileNameHere = fullfile(movFolder, lst(iFrame).name);
         try
@@ -69,6 +61,21 @@ else
                 otherwise
                     warning('Error while reading file. Entering debug mode.');
                     keyboard
+            end
+        end
+        
+        if mod(iFrame, 100)==1
+            % Create file that indicates what the current frame is, for
+            % prefetching:
+            try
+                acqName = strsplit(movFolder, '\');
+                acqName = acqName{end-1};
+                fid = fopen(['T:\' acqName '.txt'], 'wt');
+                fwrite(fid, fileNameHere, 'char');
+                fclose(fid);
+            catch err
+                warning('Error writing to prefetch metadata file:\n%s', ...
+                    err.message)
             end
         end
     else
