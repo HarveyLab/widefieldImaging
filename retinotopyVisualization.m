@@ -1,5 +1,6 @@
 %% Load data:
-pBase = '\\research.files.med.harvard.edu\Neurobio\HarveyLab\Matthias\data\imaging\widefield\';
+% pBase = '\\research.files.med.harvard.edu\Neurobio\HarveyLab\Matthias\data\imaging\widefield\';
+pBase = 'T:\';
 mouse = 'MM107';
 ls = dir(fullfile(pBase, mouse, [mouse '_*']));
 ls = ls([ls.isdir]);
@@ -40,11 +41,13 @@ for i = 1:nCond
 end
 
 % Smoothing:
-% for i = 1:nCond
-%     for ii = 1:size(results(i).tuningCorr, 3)
-%         results(i).tuningCorr(:,:,ii) = imgaussfilt(results(i).tuningCorr(:,:,ii), 2);
-%     end
-% end
+% This is particularly necessary for noisy intrinsic-imaging data that was
+% acquired at high resolution.
+for i = 1:nCond
+    for ii = 1:size(results(i).tuningCorr, 3)
+        results(i).tuningCorr(:,:,ii) = imgaussfilt(results(i).tuningCorr(:,:,ii), 3);
+    end
+end
 
 for i = 1:nCond
     % Get FFT at first non-DC frequency:
@@ -64,13 +67,13 @@ for i = 1:2
 end
 
 %% Play movies for visual inspection:
-for i = 1:4
-    % Remove edges, which can have extreme values due to motion correction:
-    movHere = results(i).tuningCorr(10:end-10, 10:end-10, :);
-    movHere = bsxfun(@minus, movHere, median(movHere, 3));
-    ijPlay(movHere, ...
-        sprintf('Condition %d', i));
-end
+% for i = 1:4
+%     % Remove edges, which can have extreme values due to motion correction:
+%     movHere = results(i).tuningCorr(10:end-10, 10:end-10, :);
+%     movHere = bsxfun(@minus, movHere, median(movHere, 3));
+%     ijPlay(movHere, ...
+%         sprintf('Condition %d', i));
+% end
 
 %% Plot
 isBackwards = 0;
@@ -120,6 +123,8 @@ colormap(gca, jet)
 axis equal
 title('Combined power')
 
+% Note that field sign is independent of signal lag, so no need to correct
+% for that in intrinsic imaging.
 meanVertiGrad = wrapToPi((angle(results(1).fft)+angle(results(3).fft))/2);
 meanHoriGrad = wrapToPi((angle(results(2).fft)+angle(results(4).fft))/2);
 
@@ -141,11 +146,11 @@ p = fullfile(p, mouse, 'map');
 [~, n, ~] = fileparts(lsDat.name);
 imwrite(ceil(mat2gray(fs, [-1 1])*255), jet(255), fullfile(p, [n '_fieldsign.png']))
 
-lsVessel = dir(fullfile(pAcq, '*vessel*'));
-if numel(lsVessel)>0
-    copyfile(fullfile(pAcq, lsVessel.name), ...
-        fullfile(p, [n '_vessel.tiff']));
-end
+% lsVessel = dir(fullfile(pAcq, '*vessel*'));
+% if numel(lsVessel)>0
+%     copyfile(fullfile(pAcq, lsVessel.name), ...
+%         fullfile(p, [n '_vessel.tiff']));
+% end
 
 %% Register to Allen:
 % load('D:\GitHub\HarveyLab\allenAtlas\allIsiMaps.mat')
@@ -193,9 +198,11 @@ if false
     delay = angle(median(results(2).subt(isV1)))/2;
 end
 
-delay = 0;
+% delay = 0;
 % delay = delay+0.1;
 
+rot = 1;
+smoothRad = 1;
 for i = 1:2
     results(i).angleNoDelay = angle(results(i).fft*rot) - delay ;
 end
