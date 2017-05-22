@@ -4,14 +4,14 @@ expName = input('Experiment Name? ','s');
 thisFileName = fullfile(dataDir,expName);
 %% Parameters
 
-settings.nTrials = 15;
-settings.barWidth = 5; % Degrees
-settings.barSpeed = 8; % Degrees per second
-settings.checkerWidth = 5; % Degrees
-settings.checkerHeight = 5; % Degrees
-settings.checkerBlinkRate = 10; % Camera Frames per Phase Shift
+settings.nTrials = 10;
+settings.barWidth = 7; % Degrees
+settings.barSpeed = 15; % Degrees per second
+settings.checkerWidth = 7; % Degrees
+settings.checkerHeight = 7; % Degrees
+settings.checkerBlinkRate = 15; % Camera Frames per Phase Shift
 settings.flipMod = 2; % (monitor refresh rate) / (camera imaging rate and/or display update rate)
-settings.redLED = 1;
+settings.redLED = 0;
 settings.blueLED = 1;
 %% Initialize DAQ and Data Logging
 

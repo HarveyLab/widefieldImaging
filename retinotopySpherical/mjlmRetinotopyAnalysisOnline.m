@@ -1,15 +1,16 @@
 function dat = mjlmRetinotopyAnalysisOnline
 
 warning('Remember to start prefetching function in a separate Matlab instance.')
-warning('Remember to set dbstop if error! Saving might fail!.')
+dbstop if error % In case anything fails before saving.
 
 %% Settings:
-mouseName = 'MM107';
-dateStr = '170209';
+mouseName = 'R2';
+dateStr = '170519';
 nBinTemp = 1; % How much movie was binned during preprocessing.
 
 % widefieldBase = '\\research.files.med.harvard.edu\Neurobio\HarveyLab\Matthias\data\imaging\widefield';
-widefieldBase = '\\intrinsicScope\E\Data\Matthias';
+% widefieldBase = '\\intrinsicScope\E\Data\Matthias';
+widefieldBase = 'E:\Data\ShihYi';
 datFolder = fullfile(widefieldBase, mouseName, [mouseName '_' dateStr '_retino']);
 movFolder = fullfile(datFolder, 'mov');
 
@@ -113,7 +114,7 @@ ref = readFrame(1, movFolder, lst, isPreprocessed, nBinTemp);
 % power at the cardinal directions from the pixel grid.
 fftFiltWinH = gausswin(dat.mov.height, round(dat.mov.height/10));
 fftFiltWinW = gausswin(dat.mov.width, round(dat.mov.width/10))';
-fftFiltWin = max((fftFiltWinH./max(fftFiltWinH)), (fftFiltWinW./max(fftFiltWinW))); % Cross
+fftFiltWin = bsxfun(@max, bsxfun(@rdivide, fftFiltWinH, max(fftFiltWinH)), bsxfun(@rdivide, fftFiltWinW, max(fftFiltWinW))); % Cross
 ref = ifft2(ifftshift(fftshift(fft2(ref)) .* (1-fftFiltWin)));
 
 % Pre-calculate reference FFT:
@@ -215,8 +216,8 @@ for iCond = 1:nCond
         % Spatial high-pass filter with large kernel to remove global
         % fluctuations (do this before motion correction so that black
         % edges do not corrupt filtering):
-        imgHereGpu = gpuArray(double(imgHere));
-        %         imgHereGpu = imgHere;
+%         imgHereGpu = gpuArray(double(imgHere));
+        imgHereGpu = imgHere;
         % DON'T SUBTRACT LOWPASS! The maps are smoother without
         % subtracting, even if the movies look worse.
         %         imgHereGpu = imgHereGpu ./ imgaussfilt(imgHereGpu, lowPassFilterSd, 'pad', 'symm');
@@ -224,22 +225,25 @@ for iCond = 1:nCond
         % Subtract median to reduce the impact of individual bright frames:
         % (Don't do this in mice with viral expression, to keep pixels
         % independent across space.)
+%         tmp = imgHereGpu(200:400, 150:350);
         imgHereGpu = imgHereGpu ./ median(imgHereGpu(:));
         
         % Correct motion:
-        imgHereMc = ifft2(ifftshift(fftshift(fft2(imgHere)) .* (1-fftFiltWin))); % Filter image as described above (where ref is calculated).
-        [imgHereGpu, results(iCond).xShift(iFrame), results(iCond).yShift(iFrame)] = ...
-            correct_translation_singleframe(imgHereMc, ...
-            ref_fft, 1, imgHereGpu);
+        results(iCond).xShift(iFrame) = nan;
+        results(iCond).yShift(iFrame) = nan;
+%         imgHereMc = ifft2(ifftshift(fftshift(fft2(imgHere)) .* (1-fftFiltWin))); % Filter image as described above (where ref is calculated).
+%         [imgHereGpu, results(iCond).xShift(iFrame), results(iCond).yShift(iFrame)] = ...
+%             correct_translation_singleframe(imgHereMc, ...
+%             ref_fft, 1, imgHereGpu);
         imgHere = double(gather(imgHereGpu));
         %         imgHere = imgHereGpu;
         
         % Ignore frames that have extreme shifts:
-        if abs(results(iCond).xShift(iFrame)) > 10 || ...
-                abs(results(iCond).yShift(iFrame)) > 10
-            fprintf('Encountered extreme shift in frame %d.\n', iFrame)
-            continue
-        end
+%         if abs(results(iCond).xShift(iFrame)) > 10 || ...
+%                 abs(results(iCond).yShift(iFrame)) > 10
+%             fprintf('Encountered extreme shift in frame %d.\n', iFrame)
+%             continue
+%         end
         
         % Add current frame to the appropriate bin:
         iBin = barPosition_disc(iFrame);
@@ -264,11 +268,11 @@ for iCond = 1:nCond
                     permute(results(iCond).nInBin(:), [3 2 1]));
                 isGoodFrame = results(iCond).nInBin > 0;
                 tuningHere = tuningHere(:,:,isGoodFrame);
-                tuningHere = tuningHere-mean(tuningHere, 3);
+                tuningHere = bsxfun(@minus, tuningHere, mean(tuningHere, 3));
                 tuningHere = min(max(tuningHere, -5000), 5000);
                 tiffWrite(mat2gray(tuningHere)*2^16, ...
                     sprintf('tuning_cond%d.tif', ...
-                    iCond), 'T:\');
+                    iCond), 'E:\temp');
             catch err
                 warning('Error while saving intermediate result:\n%s', ...
                     err.message)

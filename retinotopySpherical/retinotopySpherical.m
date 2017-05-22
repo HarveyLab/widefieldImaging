@@ -15,7 +15,9 @@ settings.mouseName = char(inputdlg('Enter mouse name:'));
 folderName = [settings.mouseName, '_', ...
     datestr(now, 'yymmdd'), ...
     '_retino'];
-settings.saveDir = fullfile('Z:\HarveyLab\Matthias\data\imaging\widefield', ...
+% settings.saveDir = fullfile('Z:\HarveyLab\Matthias\data\imaging\widefield', ...
+%     settings.mouseName, folderName);
+settings.saveDir = fullfile('E:\Data\ShihYi\', ...
     settings.mouseName, folderName);
 clipboard('copy', fullfile(settings.saveDir, 'mov'));
 if ~exist(settings.saveDir, 'dir')
@@ -24,14 +26,14 @@ if ~exist(settings.saveDir, 'dir')
 end
 
 % 10 reps was not enough with transgenic. Try 20.
-settings.nRepeats = 40; % How often each direction is repeated, i.e. there will be 4 times as many sweeps. Garrett uses 6-10 times 10, so up to 100 sweeps!
+settings.nRepeats = 50; % How often each direction is repeated, i.e. there will be 4 times as many sweeps. Garrett uses 6-10 times 10, so up to 100 sweeps!
 settings.nRepeatsPerBlock = 6;
 settings.barWidth_deg = 5; % Marshel uses 20
 settings.barSpeed_dps = 7; % Marshel uses 8.5-9.5 dps
 settings.checkerWidth_deg = 1/0.08;
 settings.checkerBlink_hz = 3; % Marshel uses 6 Hz
-settings.minDistEyeToScreen_mm = 115;
-settings.screenOri_xyPix = [-120, 76];
+settings.minDistEyeToScreen_mm = 110;
+settings.screenOri_xyPix = [-10, 55];
 settings.pixelReductionFactor = 5; % How much the texture is downsampled...affects frame rate.
 settings.fpsStim = 60; % Target display/acquisition rate. Max is 120 Hz (monitor refresh)
 settings.camFrameStride = 1; % The camera takes one picture every this many frames.
@@ -55,7 +57,7 @@ end
 
 %% Run this to find the screen origin:
 if false
-    screenId = 2; %#ok<UNRCH>
+    screenId = 1; %#ok<UNRCH>
     res = Screen('Resolution', screenId);
     while KbCheck
     end

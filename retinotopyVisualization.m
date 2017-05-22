@@ -1,6 +1,7 @@
 %% Load data:
-pBase = '\\research.files.med.harvard.edu\Neurobio\HarveyLab\Matthias\data\imaging\widefield\';
-mouse = 'MM107';
+%pBase = 'Z:\HarveyLab\Laura\DATA\widefield';
+pBase = 'E:\Data\ShihYi';
+mouse = 'R2';
 ls = dir(fullfile(pBase, mouse, [mouse '_*']));
 ls = ls([ls.isdir]);
 
@@ -40,11 +41,11 @@ for i = 1:nCond
 end
 
 % Smoothing:
-% for i = 1:nCond
-%     for ii = 1:size(results(i).tuningCorr, 3)
-%         results(i).tuningCorr(:,:,ii) = imgaussfilt(results(i).tuningCorr(:,:,ii), 2);
-%     end
-% end
+for i = 1:nCond
+    for ii = 1:size(results(i).tuningCorr, 3)
+        results(i).tuningCorr(:,:,ii) = imgaussfilt(results(i).tuningCorr(:,:,ii), 4);
+    end
+end
 
 for i = 1:nCond
     % Get FFT at first non-DC frequency:
@@ -68,8 +69,7 @@ for i = 1:4
     % Remove edges, which can have extreme values due to motion correction:
     movHere = results(i).tuningCorr(10:end-10, 10:end-10, :);
     movHere = bsxfun(@minus, movHere, median(movHere, 3));
-    ijPlay(movHere, ...
-        sprintf('Condition %d', i));
+    implay(mat2gray(movHere, prctile(movHere(:), [1, 99])));
 end
 
 %% Plot
@@ -127,7 +127,7 @@ subplot(2, 3, 6);
 [~, Gdir1] = imgradient(meanVertiGrad);
 [~, Gdir2] = imgradient(meanHoriGrad);
 fieldSign = sind(Gdir1 - Gdir2);
-fs = imgaussfilt(fieldSign, 5);
+fs = imgaussfilt(fieldSign, 6);
 imagesc(fs, [-1 1])
 colormap(gca, jet)
 title('Field sign')
@@ -147,44 +147,6 @@ if numel(lsVessel)>0
         fullfile(p, [n '_vessel.tiff']));
 end
 
-%% Register to Allen:
-% load('D:\GitHub\HarveyLab\allenAtlas\allIsiMaps.mat')
-% signMapAllen = mean(signMapsAll/255, 3);
-% subplot(2, 3, 6);
-% h = impoly;
-% isValidSignMap = createMask(h);
-signMapAllenCrop = signMapAllen .* double(abs(signMapAllen)>1e-1);
-signMapAllenCrop = signMapAllen(any(signMapAllenCrop, 2), any(abs(signMapAllenCrop)>1e-2, 1));
-signMapHere = fs .* isValidSignMap;
-signMapCropped = signMapHere(any(signMapHere, 2), any(signMapHere, 1));
-signMapCropped = signMapCropped(1:130, :);
-figure(2)
-clf
-imagesc(signMapCropped)
-axis equal
-
-% [optimizer, metric] = imregconfig('monomodal');
-[optimizer, metric] = imregconfig('multimodal');
-% optimizer.MinimumStepLength = 1e-8;
-% optimizer.MaximumStepLength = 1e-4;
-optimizer.MaximumIterations = 200;
-
-moving_reg = imregister(signMapAllenCrop, signMapCropped,...
-    'similarity', optimizer, metric);
-
-figure(3)
-imagesc(moving_reg)
-axis equal
-grid on
-figure(4)
-imagesc(signMapCropped)
-axis equal
-grid on
-
-figure(5)
-imshowpair(moving_reg, signMapCropped, 'diff')
-
-
 %% Get delay:
 if false
     subplot(2, 3, 6);
@@ -193,15 +155,15 @@ if false
     delay = angle(median(results(2).subt(isV1)))/2;
 end
 
-delay = 0;
+% delay = 0;
 % delay = delay+0.1;
 
 for i = 1:2
-    results(i).angleNoDelay = angle(results(i).fft*rot) - delay ;
+    results(i).angleNoDelay = angle(results(i).fft) - delay ;
 end
 
 for i = 3:4
-    results(i).angleNoDelay = angle(results(i).fft*rot) - delay;
+    results(i).angleNoDelay = angle(results(i).fft) - delay;
 end
 
 % Plot after subtracting delay:
@@ -229,13 +191,15 @@ meanHori = wrapToPi((results(2).angleNoDelay+results(4).angleNoDelay)/2);
 % axis equal
 
 % Note: Field sign is not affected by subtractind delay except for shift of discontinuity..
+meanVertiGrad = wrapToPi((results(1).angleNoDelay+results(3).angleNoDelay)/2);
+meanHoriGrad = wrapToPi((results(2).angleNoDelay+results(4).angleNoDelay)/2);
+
 subplot(2, 3, 6);
-[~, Gdir1] = imgradient(imgaussfilt(meanVerti, smoothRad));
-[~, Gdir2] = imgradient(imgaussfilt(meanHori, smoothRad));
+[~, Gdir1] = imgradient(meanVertiGrad);
+[~, Gdir2] = imgradient(meanHoriGrad);
 fieldSign = sind(Gdir1 - Gdir2);
-fs = imgaussfilt(fieldSign, smoothRad);
-fs = fs .* powerCombined;
-imagesc(fs, [-1 1] .* prctile(abs(fs(:)), 95))
+fs = imgaussfilt(fieldSign, 6);
+imagesc(fs, [-1 1])
 colormap(gca, jet)
 title('Field sign')
 axis equal

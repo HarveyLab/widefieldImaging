@@ -64,20 +64,21 @@ else
             end
         end
         
-        if mod(iFrame, 100)==1
-            % Create file that indicates what the current frame is, for
-            % prefetching:
-            try
-                acqName = strsplit(movFolder, '\');
-                acqName = acqName{end-1};
-                fid = fopen(['T:\' acqName '.txt'], 'wt');
-                fwrite(fid, fileNameHere, 'char');
-                fclose(fid);
-            catch err
-                warning('Error writing to prefetch metadata file:\n%s', ...
-                    err.message)
-            end
-        end
+% Don't prefetch on local computer:
+%         if mod(iFrame, 100)==1
+%             % Create file that indicates what the current frame is, for
+%             % prefetching:
+%             try
+%                 acqName = strsplit(movFolder, '\');
+%                 acqName = acqName{end-1};
+%                 fid = fopen(['T:\' acqName '.txt'], 'wt');
+%                 fwrite(fid, fileNameHere, 'char');
+%                 fclose(fid);
+%             catch err
+%                 warning('Error writing to prefetch metadata file:\n%s', ...
+%                     err.message)
+%             end
+%         end
     else
         fileNameHere = '';
     end
