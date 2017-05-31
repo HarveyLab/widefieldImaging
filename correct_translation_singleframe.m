@@ -17,7 +17,7 @@ else
 end
 
 upsamplingFac = 50; % This needs to be >= 50 for accurate widefield results.
-maxAllowedShift = 30; % Set this to the maximum shift you want to check for. Smaller values speed up the computation.
+maxAllowedShift = 10; % Set this to the maximum shift you want to check for. Smaller values speed up the computation.
 
 output = dftregistration(fft2(moving), ref_fft(:,:,1), ref_fft(:,:,2), ref_fft(:,:,3), upsamplingFac, maxAllowedShift);
 output = gather(output); % In case input was a GPU-array.
@@ -27,7 +27,7 @@ yshift = output(3);
 % Translate (only if there are significant shifts):
 [h, w] = size(movingFullSize);
 if abs(xshift) > 1/(2*upsamplingFac) && abs(yshift) > 1/(2*upsamplingFac)
-    corrected = interp2(movingFullSize, (1:w)-xshift, ((1:h)-yshift)', 'linear', 0);
+    corrected = interp2(movingFullSize, (1:w)-xshift, ((1:h)-yshift)', 'cubic', 0);
 else
     corrected = movingFullSize;
 end

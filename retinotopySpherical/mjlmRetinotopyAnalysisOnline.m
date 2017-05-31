@@ -1,16 +1,16 @@
 function dat = mjlmRetinotopyAnalysisOnline
 
-warning('Remember to start prefetching function in a separate Matlab instance.')
+% warning('Remember to start prefetching function in a separate Matlab instance.')
 dbstop if error % In case anything fails before saving.
 
 %% Settings:
-mouseName = 'R2';
-dateStr = '170519';
+mouseName = 'RH_001';
+dateStr = '170530';
 nBinTemp = 1; % How much movie was binned during preprocessing.
 
 % widefieldBase = '\\research.files.med.harvard.edu\Neurobio\HarveyLab\Matthias\data\imaging\widefield';
 % widefieldBase = '\\intrinsicScope\E\Data\Matthias';
-widefieldBase = 'E:\Data\ShihYi';
+widefieldBase = 'E:\Data\Rich';
 datFolder = fullfile(widefieldBase, mouseName, [mouseName '_' dateStr '_retino']);
 movFolder = fullfile(datFolder, 'mov');
 
@@ -19,6 +19,9 @@ if numel(ls) ~=1
     error('Found either none or several dat files. Check!')
 end
 datFile = fullfile(datFolder, ls.name);
+
+isMotionCorrect = false;
+spatialDownsamplingFactor = 1;
 
 %% Get movie metadata:
 dat = load(datFile);
@@ -52,28 +55,17 @@ fileNameNumber = sscanf(sprintf('%s,', cstr{:}), '%d,');
 lst = lst(order);
 assert(~isempty(lst))
 
-% img = imread(fullfile(movFolder, lst(1).name));
-img = readFrame(1, movFolder, lst, isPreprocessed, nBinTemp);
+img = imresize(readFrame(1, movFolder, lst, isPreprocessed, nBinTemp), ...
+    1/spatialDownsamplingFactor);
 
 dat.mov.height = size(img, 1);
 dat.mov.width = size(img, 2);
-lowPassFilterSd = dat.mov.height/5;
-% dat.mov.nFramesStim = numel(dat.frame.past.frameId);
-% dat.mov.nFramesCam = numel(lst);
-% dat.mov.nPixPerFrame = dat.mov.height * dat.mov.width;
 temporalDownSampling = 1;
-%
-% % There is sometimes an additional frame in the end, which is black, so
-% % it's OK to have one extra frame.
-% assert(abs(sum(dat.frame.past.isCamTriggerFrame)-dat.mov.nFramesCam)<=1, ...
-%     'Recorded number of images does not match sync data!')
 
 %% Get condition data:
 uniqueDir = unique(dat.frame.past.barDirection_deg);
 nCond = numel(uniqueDir);
 
-% For non-fft analysis:
-% maxEccentricity = ceil(max(abs(dat.frame.past.barPosition_deg))/10)*10;
 maxEccentricity = 70;
 edges = -maxEccentricity:2:maxEccentricity;
 nBins = numel(edges)-1;
@@ -105,7 +97,8 @@ end
 % For motion correction, use first frame as reference, so that we can do
 % analysis online: (SNR is good enough to just use one frame.)
 % ref = double(imread(fullfile(movFolder, lst(1).name)));
-ref = readFrame(1, movFolder, lst, isPreprocessed, nBinTemp);
+ref = imresize(readFrame(1, movFolder, lst, isPreprocessed, nBinTemp), ...
+    1/spatialDownsamplingFactor);
 
 % Filter images for motion correction: We use a cross-shaped mask to filter
 % the fourier spectrum. This has two effects: The center of the cross
@@ -118,11 +111,7 @@ fftFiltWin = bsxfun(@max, bsxfun(@rdivide, fftFiltWinH, max(fftFiltWinH)), bsxfu
 ref = ifft2(ifftshift(fftshift(fft2(ref)) .* (1-fftFiltWin)));
 
 % Pre-calculate reference FFT:
-% Crop to image to avoid the part that contains the visual response,
-% because that can throw off the motion correction.
-refCrop = ref;
-ref_fft = zeros(size(refCrop, 1), size(refCrop, 2), 3);
-ref_fft(:,:,1) = fft2(refCrop);
+ref_fft(:,:,1) = fft2(ref);
 ref_fft(:,:,2) = fftshift(ref_fft(:,:,1));
 ref_fft(:,:,3) = conj(ref_fft(:,:,1));
 
@@ -131,9 +120,10 @@ isCamTriggerFrame = dat.frame.past.isCamTriggerFrame;
 barDirection_deg = dat.frame.past.barDirection_deg;
 barPosition_deg = dat.frame.past.barPosition_deg;
 barPosition_disc = discretize(dat.frame.past.barPosition_deg, edges);
+xShift = 0;
+yShift = 0;
 
 for iCond = 1:nCond
-    
     % Load metadat file
     dat = load(datFile);
     nStimFramesDisplayed = max(dat.frame.past.frameId);
@@ -213,37 +203,35 @@ for iCond = 1:nCond
             break
         end
         
-        % Spatial high-pass filter with large kernel to remove global
-        % fluctuations (do this before motion correction so that black
-        % edges do not corrupt filtering):
-%         imgHereGpu = gpuArray(double(imgHere));
-        imgHereGpu = imgHere;
-        % DON'T SUBTRACT LOWPASS! The maps are smoother without
-        % subtracting, even if the movies look worse.
-        %         imgHereGpu = imgHereGpu ./ imgaussfilt(imgHereGpu, lowPassFilterSd, 'pad', 'symm');
+        imgHere = imresize(imgHere, spatialDownsamplingFactor);
         
-        % Subtract median to reduce the impact of individual bright frames:
-        % (Don't do this in mice with viral expression, to keep pixels
-        % independent across space.)
-%         tmp = imgHereGpu(200:400, 150:350);
-        imgHereGpu = imgHereGpu ./ median(imgHereGpu(:));
-        
-        % Correct motion:
-        results(iCond).xShift(iFrame) = nan;
-        results(iCond).yShift(iFrame) = nan;
-%         imgHereMc = ifft2(ifftshift(fftshift(fft2(imgHere)) .* (1-fftFiltWin))); % Filter image as described above (where ref is calculated).
-%         [imgHereGpu, results(iCond).xShift(iFrame), results(iCond).yShift(iFrame)] = ...
-%             correct_translation_singleframe(imgHereMc, ...
-%             ref_fft, 1, imgHereGpu);
-        imgHere = double(gather(imgHereGpu));
-        %         imgHere = imgHereGpu;
-        
-        % Ignore frames that have extreme shifts:
-%         if abs(results(iCond).xShift(iFrame)) > 10 || ...
-%                 abs(results(iCond).yShift(iFrame)) > 10
-%             fprintf('Encountered extreme shift in frame %d.\n', iFrame)
-%             continue
-%         end
+        % Motion correction:
+        if isMotionCorrect
+            % Pre-correct with previous shift:
+            xShiftPrev = xShift;
+            yShiftPrev = yShift;
+            imgHere = interp2(imgHere, (1:size(imgHere, 2))-xShiftPrev, ...
+                                       ((1:size(imgHere, 1))-yShiftPrev)', 'cubic', 0);
+
+            imgHereMc = ifft2(ifftshift(fftshift(fft2(imgHere)) .* (1-fftFiltWin))); % Filter image as described above (where ref is calculated).
+            [imgHere, xShift, yShift] = correct_translation_singleframe(imgHereMc, ...
+                ref_fft, 1, imgHere);
+            
+            xShift = xShift + xShiftPrev;
+            results(iCond).xShift(iFrame) = xShift;
+            yShift = yShift + yShiftPrev;
+            results(iCond).yShift(iFrame) = yShift;
+            
+            % Discard frames with large shifts relative to the previous
+            % frame because the image might be blurry:
+            if sqrt((xShift-xShiftPrev)^2 + (yShift-yShiftPrev)^2) > 0.05
+                disp('Skipping frame with large shift.')
+                continue
+            end
+        else
+            results(iCond).xShift(iFrame) = nan;
+            results(iCond).yShift(iFrame) = nan;
+        end
         
         % Add current frame to the appropriate bin:
         iBin = barPosition_disc(iFrame);
@@ -264,6 +252,7 @@ for iCond = 1:nCond
         
         if ~mod(nFramesProcessedThisCond, 1000)
             try
+                % Save intermediate movie for checking during processing:
                 tuningHere = bsxfun(@rdivide, results(iCond).tuning, ...
                     permute(results(iCond).nInBin(:), [3 2 1]));
                 isGoodFrame = results(iCond).nInBin > 0;
@@ -290,8 +279,6 @@ for iCond = 1:nCond
     end
 end
 
-% dat.mov.ref = ref;
-
 %% Save:
 [p, f, ~] = fileparts(datFile);
 f = sprintf('%s_results%s', f, datestr(now, 'yymmdd'));
@@ -302,5 +289,3 @@ try
 catch err
     throwAsWarning(err)
 end
-
-% keyboard
