@@ -17,7 +17,7 @@ folderName = [settings.mouseName, '_', ...
     '_retino'];
 % settings.saveDir = fullfile('Z:\HarveyLab\Matthias\data\imaging\widefield', ...
 %     settings.mouseName, folderName);
-settings.saveDir = fullfile('E:\Data\ShihYi\', ...
+settings.saveDir = fullfile('E:\Data\Shin\', ...
     settings.mouseName, folderName);
 clipboard('copy', fullfile(settings.saveDir, 'mov'));
 if ~exist(settings.saveDir, 'dir')
@@ -56,14 +56,16 @@ if ~strcmp(button, 'Yes')
 end
 
 %% Run this to find the screen origin:
-if false
-    screenId = 1; %#ok<UNRCH>
+if 0
+    screenId = 0; %#ok<UNRCH>
     res = Screen('Resolution', screenId);
     while KbCheck
     end
     
     while ~KbCheck
         [x, y] = GetMouse(screenId);
+        res.width
+        res.height
         fprintf('Mouse pos x: %1.0f, y:%1.0f\n', x-res.width/2, y-res.height/2)
         pause(0.3)
     end
