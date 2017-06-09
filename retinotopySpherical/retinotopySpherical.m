@@ -33,7 +33,7 @@ settings.barSpeed_dps = 7; % Marshel uses 8.5-9.5 dps
 settings.checkerWidth_deg = 1/0.08;
 settings.checkerBlink_hz = 3; % Marshel uses 6 Hz
 settings.minDistEyeToScreen_mm = 110;
-settings.screenOri_xyPix = [-10, 55];
+settings.screenOri_xyPix = [10, 300];
 settings.pixelReductionFactor = 5; % How much the texture is downsampled...affects frame rate.
 settings.fpsStim = 60; % Target display/acquisition rate. Max is 120 Hz (monitor refresh)
 settings.camFrameStride = 1; % The camera takes one picture every this many frames.
@@ -57,7 +57,7 @@ end
 
 %% Run this to find the screen origin:
 if 0
-    screenId = 0; %#ok<UNRCH>
+    screenId = 2; %#ok<UNRCH>
     res = Screen('Resolution', screenId);
     while KbCheck
     end
