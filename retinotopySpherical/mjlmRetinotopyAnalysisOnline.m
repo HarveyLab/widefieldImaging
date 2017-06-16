@@ -5,7 +5,7 @@ dbstop if error % In case anything fails before saving.
 
 %% Settings:
 mouseName = 'DA020';
-dateStr = '170608';
+dateStr = '170125';
 nBinTemp = 1; % How much movie was binned during preprocessing.
 
 % widefieldBase = '\\research.files.med.harvard.edu\Neurobio\HarveyLab\Matthias\data\imaging\widefield';
