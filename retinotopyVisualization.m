@@ -1,7 +1,7 @@
 %% Load data:
 %pBase = 'Z:\HarveyLab\Laura\DATA\widefield';
 pBase = 'E:\Data\ShihYi';
-mouse = 'R2';
+mouse = '10';
 ls = dir(fullfile(pBase, mouse, [mouse '_*']));
 ls = ls([ls.isdir]);
 
@@ -18,6 +18,7 @@ fprintf('Loaded %s.\n', lsResult(end).name);
 % during the generation of visual stimuli):
 isBarPositionSignIncorrect = meta.frame.past.barPosition_deg(...
     find(meta.frame.past.barDirection_deg == 90, 1, 'first')) < 0;
+
 
 %% Get response phase:
 nCond = numel(results);
