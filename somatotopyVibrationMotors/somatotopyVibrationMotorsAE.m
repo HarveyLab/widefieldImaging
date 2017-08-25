@@ -4,14 +4,14 @@ function somatotopyVibrationMotorsAE
 
 isDebug = true;
 settings = struct;
-settings.saveDir = 'C:\DATA\test';
+settings.saveDir = 'E:\Data\Alan';
 settings.expName = char(inputdlg('Experiment Name? '));
 
-settings.nRepeats = 20; % How often the whole set of conditions is repeated.
+settings.nRepeats = 5; % How often the whole set of conditions is repeated.
 settings.onTime_s = 0.4; % How long each motor is on
 settings.offTime_s = 1; %off-time in between stimuli
 
-settings.motorPositionName = {'hindpaw', 'forepaw', 'back'};
+settings.motorPositionName = {'back', 'hindpaw', 'forepaw'};
 settings.motorSequence = getMinimumRepetitionSequence(...
     numel(settings.motorPositionName), ...
     numel(settings.motorPositionName)*settings.nRepeats);
@@ -64,7 +64,10 @@ isUserAbort = 0;
 % Make sure all buttons are released before continuing:
 while KbCheck
 end
-%outputSingleScan(camControl,[1 1 0]) % LEDs on.
+
+if ~isDebug
+    outputSingleScan(camControl,[1 1 0]) % LEDs on.
+end
 
 nCond = numel(settings.motorPositionName);
 ticFrame = tic;
@@ -122,21 +125,22 @@ end
 
 %% Clean up
 % Save:
-if ~exist(settings.saveDir, 'dir')
-    mkdir(settings.saveDir);
-end
-saveFileName = fullfile(settings.saveDir, ...
-    [datestr(now, 'yyyymmdd_HHMMSS'), '_somatotopy_', settings.expName]);
-
-mfile = fileread(which(mfilename));
-save(saveFileName, 'settings', 'frame', 'mfile')
-fprintf('Somatotopy data saved at %s.\n', saveFileName)
-
-assignin('base', 'settings', settings);
-assignin('base', 'frame', frame);
-assignin('base', 'mfile', mfile);
 
 if ~isDebug
+    if ~exist(settings.saveDir, 'dir')
+        mkdir(settings.saveDir);
+    end
+    saveFileName = fullfile(settings.saveDir, ...
+        [datestr(now, 'yyyymmdd_HHMMSS'), '_somatotopy_', settings.expName]);
+
+    mfile = fileread(which(mfilename));
+    save(saveFileName, 'settings', 'frame', 'mfile')
+    fprintf('Somatotopy data saved at %s.\n', saveFileName)
+
+    assignin('base', 'settings', settings);
+    assignin('base', 'frame', frame);
+    assignin('base', 'mfile', mfile);
+
     % Close DAQ:
     outputSingleScan(camControl, [0 0 0])
     delete(camControl)
