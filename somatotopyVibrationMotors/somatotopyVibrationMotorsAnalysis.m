@@ -3,9 +3,9 @@ function avgMov = somatotopyVibrationMotorsAnalysis
 %% Settings:
 % base = '\\research.files.med.harvard.edu\Neurobio\HarveyLab\Matthias\data\imaging\widefield';
 
-base = 'E:\scratch\';
-movFolder = fullfile(base, 'MM102_160718', 'somato');
-datFile = fullfile(base, '20160718_184127_somatotopy_MM102_160718.mat');
+base = 'C:\DATA\';
+movFolder = fullfile(base, '20170828 lumbar', 'vibrationMotors');
+datFile = fullfile(base, '20170828 lumbar', '20170828_164154_somatotopy_one.mat');
 chunkDur_s = 0.2;
 
 %% Get movie metadata:
@@ -17,7 +17,12 @@ list = sort(...
     strsplit(...
     regexprep(evalc('dir(p)'), '\s{2,}', '\n'), ...
     '\n')); % Sort is necessary because evalc is not sorted alphabetically.
-% list = list(3:end); % Remove . and ..
+
+    % regexprep replaces original string, here replacing 2 or more
+    % instnaces of white spaces with a return, making the list from the
+    % directory.
+    % seems like using list = ls('*.tif*'); would be easier
+list = list(3:end); % Remove . and ..
 % lst = dir(fullfile(movFolder, '*.tiff'));
 
 nFiles = numel(list);
@@ -29,9 +34,19 @@ end
 fileNameNumber = zeros(nFiles, 1);
 for iFile = 1:nFiles
     str = regexp(lst(iFile).name, '(?<=_)()\d{4,5}(?=\.)', 'match', 'once');
+       % explanation of these regular expressions:
+        % (?<=_) is a positive lookbehind, meaning that the expression
+        % being looked for follows the '_' character.
+        % \d{4,5} is find a sequence of four or five digits, such as '12345'
+        % (?=\.) is a positive lookahead. The slash escapes the period,
+        % which usually refers to any character.
+        
+        % do not understand the purpose of the empty parentheses ()
+        
     fileNameNumber(iFile) = str2double(str);
 end
-nFramesInSyncStruct = numel(dat.frame.past.frameId);
+nFramesInSyncStruct = numel(dat.frame.past.frameId)
+nFiles
 assert(nFramesInSyncStruct==nFiles, 'Number of image files does not match number of frames recorded in sync struct!')
 [~, order] = sort(fileNameNumber);
 lst = lst(order);
@@ -106,3 +121,5 @@ dat.mov.ref = ref;
 f = sprintf('%s_avgMov%s', f, datestr(now, 'yymmdd'));
 tiffWrite(avgMov, f, p);
 save(fullfile(p, f), '-struct', 'dat');
+
+end

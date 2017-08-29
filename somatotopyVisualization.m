@@ -2,15 +2,23 @@
 % p = '\\intrinsicScope\D\Data\Matthias';
 % p = '\\research.files.med.harvard.edu\Neurobio\HarveyLab\Matthias\data\imaging\widefield';
 % p = 'T:\';
-p = 'E:\scratch';
+p = fullfile('C:\DATA\', '20170828 lumbar');
 
 % MM102:
 % mov = tiffRead(fullfile(p, '20160718_184127_somatotopy_MM102_160718_avgMov160719.tif')); % No mtion corr.
 % meta = load(fullfile(p, '20160718_184127_somatotopy_MM102_160718.mat'));
 
-% MM104:
-mov = single(tiffRead(fullfile(p, '20160729_195518_somatotopy_MM104_2_avgMov160729.tif')));
-meta = load(fullfile(p, '20160729_195518_somatotopy_MM104_2.mat'));
+% % Alan's 2 GU t8 actual:
+% mov = single(tiffRead(fullfile(p, '20170824_164215_somatotopy_actual_avgMov170825.tif')));
+% meta = load(fullfile(p, '20170824_164215_somatotopy_actual.mat'));
+
+% Alan's 2 GU t8 actual2:
+% mov = single(tiffRead(fullfile(p, '20170824_174902_somatotopy_actual2_avgMov170826.tif')));
+% meta = load(fullfile(p, '20170824_174902_somatotopy_actual2.mat'));
+
+% Lumbar corticospinal 20170828:
+mov = single(tiffRead(fullfile(p, '20170828_164154_somatotopy_one_avgMov170828.tif')));
+meta = load(fullfile(p, '20170828_164154_somatotopy_one.mat'));
 
 [height, width, nFrames] = size(mov);
 
@@ -22,8 +30,8 @@ meta = load(fullfile(p, '20160729_195518_somatotopy_MM104_2.mat'));
 % movDetrend = bsxfun(@rdivide, bsxfun(@minus, movDetrend, mn), mn);
 
 %% Settings:
-nChunksOn = meta.settings.onTime_s/0.25;
-nChunksOff = meta.settings.offTime_s/0.25;
+nChunksOn = meta.settings.onTime_s/0.2;
+nChunksOff = meta.settings.offTime_s/0.2;
 nCond = numel(meta.settings.motorPositionName);
 nChunksPerTrial = nChunksOn + nChunksOff;
 
@@ -73,8 +81,8 @@ ijPlay(avgMov)
 %% Subtract mean of blank and average:
 % Select which chunks (out of nChunksOn+Off) go torwards the stim and blank
 % averages:
-% stimChunks = 1:2;
-blankChunks = 3:10;
+stimChunks = 1:2;
+blankChunks = 3:7;
 
 % Subtract mean of blank for each chunk:
 movSub = zeros(height, width, nFrames/nChunksPerTrial);
@@ -98,23 +106,45 @@ end
 ijPlay(movAvg)
 
 %% Show individual conditions:
+figure(2)
+imagesc(movAvg(:,:,1),[0,0.025])
+pbaspect([1 1 1])
+colorbar
+title('back')
+xticks([])
+yticks([])
+colormap(parula)
+
 figure(3)
-imagesc(movAvg(:,:,5))
-colormap(jet)
+imagesc(movAvg(:,:,2),[0,0.025])
+pbaspect([1 1 1])
+title('hindpaw')
+colormap(parula)
+xticks([])
+yticks([])
+
+figure(4)
+imagesc(movAvg(:,:,3),[0, 0.025])
+title('forepaw')
+colormap(parula)
+pbaspect([1 1 1])
+xticks([])
+yticks([])
 
 %% Show activation relative to mean:
-movRel = movAvg(:,:,[1,  4, 5]);
+movRel = movAvg(:,:,[1, 2, 3]);
 movRel = bsxfun(@rdivide, movRel, mean(mean(movRel, 1), 2));
 movRel = bsxfun(@minus, movRel, mean(movRel, 3));
 ijPlay(movRel)
 
 %% Show differences between two conditions:
-hindlimb = movAvg(:,:,3) - movAvg(:,:,5);
-hindlimb = imgaussfilt(hindlimb, 10);
-figure(1)
-imagesc(hindlimb, prctile(hindlimb(:), [0.1 99.9]))
-colormap(french)
 
-title({'Left-right forelimb response', ...
-    '(Note that response is negative-going.', ...
-    'Left lowers reflectance in right cortex.'})
+hindlimb = movAvg(:,:,2) - movAvg(:,:,1);
+hindlimb = imgaussfilt(hindlimb, 10);
+figure(5)
+imagesc(hindlimb, prctile(hindlimb(:), [0.1 99.9]))
+colormap(parula)
+title('hindlimb-back response')
+pbaspect([1 1 1])
+xticks([])
+yticks([])
