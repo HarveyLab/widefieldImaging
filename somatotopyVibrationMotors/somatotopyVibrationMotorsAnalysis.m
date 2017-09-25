@@ -1,12 +1,12 @@
 function avgMov = somatotopyVibrationMotorsAnalysis
 
 %% Settings:
-% base = '\\research.files.med.harvard.edu\Neurobio\HarveyLab\Matthias\data\imaging\widefield';
 
 base = 'C:\DATA\';
-movFolder = fullfile(base, '20170828 lumbar', 'vibrationMotors');
-datFile = fullfile(base, '20170828 lumbar', '20170828_164154_somatotopy_one.mat');
-chunkDur_s = 0.2;
+movFolder = uigetdir(base,'Select directory containing images');
+[datFile, datPath,~] = uigetfile([base '*.mat']);
+datFile = fullfile(datPath, datFile);
+chunkDur_s = 0.25;
 
 %% Get movie metadata:
 dat = load(datFile);
@@ -45,8 +45,8 @@ for iFile = 1:nFiles
         
     fileNameNumber(iFile) = str2double(str);
 end
-nFramesInSyncStruct = numel(dat.frame.past.frameId)
-nFiles
+nFramesInSyncStruct = numel(dat.frame.past.frameId);
+sprintf('%d frames in struct; %d files',nFramesInSyncStruct, nFiles)
 assert(nFramesInSyncStruct==nFiles, 'Number of image files does not match number of frames recorded in sync struct!')
 [~, order] = sort(fileNameNumber);
 lst = lst(order);

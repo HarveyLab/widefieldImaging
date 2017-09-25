@@ -2,7 +2,15 @@
 % p = '\\intrinsicScope\D\Data\Matthias';
 % p = '\\research.files.med.harvard.edu\Neurobio\HarveyLab\Matthias\data\imaging\widefield';
 % p = 'T:\';
-p = fullfile('C:\DATA\', '20170828 lumbar');
+base = fullfile('C:\DATA\');
+
+%select file for average movie
+[movFile, movPath, ~] = uigetfile([base '*.tif']);
+mov = tiffRead(fullfile(movPath,movFile));
+
+%select file containing metadata and settings
+[metaFile, metaPath, ~] = uigetfile([base '*.mat']);
+meta = load(fullfile(metaPath,metaFile));
 
 % MM102:
 % mov = tiffRead(fullfile(p, '20160718_184127_somatotopy_MM102_160718_avgMov160719.tif')); % No mtion corr.
@@ -12,13 +20,13 @@ p = fullfile('C:\DATA\', '20170828 lumbar');
 % mov = single(tiffRead(fullfile(p, '20170824_164215_somatotopy_actual_avgMov170825.tif')));
 % meta = load(fullfile(p, '20170824_164215_somatotopy_actual.mat'));
 
-% Alan's 2 GU t8 actual2:
+% % Alan's 2 GU t8 actual2:
 % mov = single(tiffRead(fullfile(p, '20170824_174902_somatotopy_actual2_avgMov170826.tif')));
 % meta = load(fullfile(p, '20170824_174902_somatotopy_actual2.mat'));
 
-% Lumbar corticospinal 20170828:
-mov = single(tiffRead(fullfile(p, '20170828_164154_somatotopy_one_avgMov170828.tif')));
-meta = load(fullfile(p, '20170828_164154_somatotopy_one.mat'));
+% % Lumbar corticospinal 20170828:
+% mov = single(tiffRead(fullfile(p, '20170828_164154_somatotopy_one_avgMov170828.tif')));
+% meta = load(fullfile(p, '20170828_164154_somatotopy_one.mat'));
 
 [height, width, nFrames] = size(mov);
 
@@ -30,8 +38,8 @@ meta = load(fullfile(p, '20170828_164154_somatotopy_one.mat'));
 % movDetrend = bsxfun(@rdivide, bsxfun(@minus, movDetrend, mn), mn);
 
 %% Settings:
-nChunksOn = meta.settings.onTime_s/0.2;
-nChunksOff = meta.settings.offTime_s/0.2;
+nChunksOn = meta.settings.onTime_s/0.25;
+nChunksOff = meta.settings.offTime_s/0.25;
 nCond = numel(meta.settings.motorPositionName);
 nChunksPerTrial = nChunksOn + nChunksOff;
 
@@ -63,7 +71,7 @@ condId = repelem(meta.settings.motorSequence', (nChunksOn+nChunksOff));
 
 for i = 1:size(avgMov, 3)
     i
-    condHere = ceil(i/(nChunksOn+nChunksOff));
+    condHere = ceil(i/(nChunksOn+nChunksOff));  % is ceiling here correct??
     chunkHere = mod(i, nChunksOn+nChunksOff);
     if chunkHere==0
         chunkHere = nChunksOn+nChunksOff;
@@ -82,7 +90,7 @@ ijPlay(avgMov)
 % Select which chunks (out of nChunksOn+Off) go torwards the stim and blank
 % averages:
 stimChunks = 1:2;
-blankChunks = 3:7;
+blankChunks = 3:8;
 
 % Subtract mean of blank for each chunk:
 movSub = zeros(height, width, nFrames/nChunksPerTrial);
@@ -107,25 +115,25 @@ ijPlay(movAvg)
 
 %% Show individual conditions:
 figure(2)
-imagesc(movAvg(:,:,1),[0,0.025])
+imagesc(movAvg(:,:,1),[0,0.0025])
 pbaspect([1 1 1])
 colorbar
-title('back')
+title(meta.settings.motorPositionName{1})
 xticks([])
 yticks([])
 colormap(parula)
 
 figure(3)
-imagesc(movAvg(:,:,2),[0,0.025])
+imagesc(movAvg(:,:,2),[-0.0025,0.0025])
 pbaspect([1 1 1])
-title('hindpaw')
+title(meta.settings.motorPositionName{2})
 colormap(parula)
 xticks([])
 yticks([])
 
 figure(4)
-imagesc(movAvg(:,:,3),[0, 0.025])
-title('forepaw')
+imagesc(movAvg(:,:,3),[0, 0.0025])
+title(meta.settings.motorPositionName{3})
 colormap(parula)
 pbaspect([1 1 1])
 xticks([])
