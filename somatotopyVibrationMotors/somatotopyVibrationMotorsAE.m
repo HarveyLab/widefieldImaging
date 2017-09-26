@@ -2,16 +2,16 @@ function somatotopyVibrationMotorsAE
 %UNTITLED Summary of this function goes here
 %   Detailed explanation goes here
 
-isDebug = true;
+isDebug = false;
 settings = struct;
 settings.saveDir = 'E:\Data\Alan';
 settings.expName = char(inputdlg('Experiment Name? '));
 
-settings.nRepeats = 5; % How often the whole set of conditions is repeated.
-settings.onTime_s = 0.4; % How long each motor is on
-settings.offTime_s = 1; %off-time in between stimuli
+settings.nRepeats = 150; % How often the whole set of conditions is repeated.
+settings.onTime_s = 0.5; % How long each motor is on
+settings.offTime_s = 1.5; %off-time in between stimuli
 
-settings.motorPositionName = {'back', 'hindpaw', 'forepaw'};
+settings.motorPositionName = {'rightHindpaw', 'leftHindpaw', 'leftBack'};
 settings.motorSequence = getMinimumRepetitionSequence(...
     numel(settings.motorPositionName), ...
     numel(settings.motorPositionName)*settings.nRepeats);

@@ -4,13 +4,13 @@ function dat = mjlmRetinotopyAnalysisOnline
 dbstop if error % In case anything fails before saving.
 
 %% Settings:
-mouseName = 'RH_001';
-dateStr = '170530';
+mouseName = '8';
+dateStr = '170920';
 nBinTemp = 1; % How much movie was binned during preprocessing.
 
 % widefieldBase = '\\research.files.med.harvard.edu\Neurobio\HarveyLab\Matthias\data\imaging\widefield';
 % widefieldBase = '\\intrinsicScope\E\Data\Matthias';
-widefieldBase = 'E:\Data\Rich';
+widefieldBase = 'E:\Data\ShihYi';
 datFolder = fullfile(widefieldBase, mouseName, [mouseName '_' dateStr '_retino']);
 movFolder = fullfile(datFolder, 'mov');
 

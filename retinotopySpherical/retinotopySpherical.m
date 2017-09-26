@@ -26,10 +26,10 @@ if ~exist(settings.saveDir, 'dir')
 end
 
 % 10 reps was not enough with transgenic. Try 20.
-settings.nRepeats = 50; % How often each direction is repeated, i.e. there will be 4 times as many sweeps. Garrett uses 6-10 times 10, so up to 100 sweeps!
-settings.nRepeatsPerBlock = 6;
-settings.barWidth_deg = 5; % Marshel uses 20
-settings.barSpeed_dps = 7; % Marshel uses 8.5-9.5 dps
+settings.nRepeats = 70; % How often each direction is repeated, i.e. there will be 4 times as many sweeps. Garrett uses 6-10 times 10, so up to 100 sweeps!
+settings.nRepeatsPerBlock = 10;
+settings.barWidth_deg = 12.5; % Marshel uses 20
+settings.barSpeed_dps = 10; % Marshel uses 8.5-9.5 dps
 settings.checkerWidth_deg = 1/0.08;
 settings.checkerBlink_hz = 3; % Marshel uses 6 Hz
 settings.minDistEyeToScreen_mm = 110;
