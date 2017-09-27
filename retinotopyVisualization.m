@@ -1,6 +1,7 @@
 %% Load data:
-%pBase = 'Z:\HarveyLab\Laura\DATA\widefield';
-pBase = 'E:\Data\Shin';
+% pBase = 'Z:\HarveyLab\Laura\DATA\widefield';
+% pBase = 'E:\Data\Shin';
+pBase = '\\research.files.med.harvard.edu\Neurobio\HarveyLab\Shin\ShinDataAll\Widefield';
 mouse = 'LT015';
 ls = dir(fullfile(pBase, mouse, [mouse '_*']));
 ls = ls([ls.isdir]);
