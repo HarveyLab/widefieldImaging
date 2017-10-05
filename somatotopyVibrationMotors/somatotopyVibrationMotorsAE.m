@@ -7,16 +7,16 @@ settings = struct;
 settings.saveDir = 'E:\Data\Alan';
 settings.expName = char(inputdlg('Experiment Name? '));
 
-settings.nRepeats = 150; % How often the whole set of conditions is repeated.
-settings.onTime_s = 0.5; % How long each motor is on
-settings.offTime_s = 1.5; %off-time in between stimuli
+settings.nRepeats = 15; % How often the whole set of conditions is repeated.
+settings.onTime_s = 8; % How long each motor is on
+settings.offTime_s = 2; %off-time in between stimuli
 
-settings.motorPositionName = {'rightHindpaw', 'leftHindpaw', 'leftBack'};
+settings.motorPositionName = {'rightHindpaw', 'leftHindpaw', 'leftForepaw'};
 settings.motorSequence = getMinimumRepetitionSequence(...
     numel(settings.motorPositionName), ...
     numel(settings.motorPositionName)*settings.nRepeats);
 
-settings.fps = 60; % acquisition rate
+settings.fps = 30; % acquisition rate
 
 % Show estimated experiment duration:
 
@@ -77,22 +77,22 @@ iTrial = 0;
 
 for iRep = 1:settings.nRepeats
     for iCond = 1:nCond
+        
         ticCond = tic;
         iTrial = iTrial + 1;
         condHere = settings.motorSequence(iTrial);
         fprintf('Repeat %d/%d, condition %d: %s\n', ...
             iRep, settings.nRepeats, condHere, ...
             settings.motorPositionName{condHere});
-        
+
         % Switch stimulus on:
         frame.next.motorState = condHere;
         fwrite(arduinoSerialObject, condHere, 'uint8')
-        
         % Record stimulus response:
         while ~isUserAbort && toc(ticCond) < settings.onTime_s
             flipFrame;
         end
-        
+        fprintf('On Time: %0.2f\n',toc(ticCond))
         % Switch stimulus off:
         frame.next.motorState = 0;
         fwrite(arduinoSerialObject, 0, 'uint8')
@@ -101,6 +101,7 @@ for iRep = 1:settings.nRepeats
         while ~isUserAbort && toc(ticCond) < (settings.offTime_s + settings.onTime_s)
             flipFrame;
         end
+        fprintf('Off Time: %0.2f\n',toc(ticCond))
     end
 end
 

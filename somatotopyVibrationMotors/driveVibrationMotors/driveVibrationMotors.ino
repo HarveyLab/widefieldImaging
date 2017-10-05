@@ -12,7 +12,7 @@ byte state = 0;
 
 // Dead man timer: unless we receive a serial signal, we will default to state 0
 // after a few seconds to endsure the motors won't run forever:
-unsigned long deadManTimeout = 5000;
+unsigned long deadManTimeout = 20000;
 unsigned long deadManTimer;
 
 void setup() {
