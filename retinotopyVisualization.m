@@ -2,12 +2,12 @@
 
 switch getComputerName
     case 'shin-pc'
-        pBase = '\\research.files.med.harvard.edu\Neurobio\HarveyLab\Shin\ShinDataAll\Widefield';
+        pBase = '\\research.files.med.harvard.edu\Neurobio\HarveyLab\Tier1\Shin\ShinDataAll\Widefield';
     otherwise
         pBase = 'E:\Data\Shin';
 end
 
-mouse = 'VS031';
+mouse = 'NN001';
 
 ls = dir(fullfile(pBase, mouse, [mouse '_*']));
 ls = ls([ls.isdir]);
@@ -143,7 +143,7 @@ axis equal
 return
 
 %% Save field sign:
-p = '\\research.files.med.harvard.edu\Neurobio\HarveyLab\Matthias\data\imaging\widefield\';
+p = '\\research.files.med.harvard.edu\Neurobio\HarveyLab\Tier1\Shin\ShinDataAll\Widefield'
 p = fullfile(p, mouse, 'map');
 [~, n, ~] = fileparts(lsDat.name);
 imwrite(ceil(mat2gray(fs, [-1 1])*255), jet(255), fullfile(p, [n '_fieldsign.png']))
