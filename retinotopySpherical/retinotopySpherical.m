@@ -17,7 +17,7 @@ folderName = [settings.mouseName, '_', ...
     '_retino'];
 % settings.saveDir = fullfile('Z:\HarveyLab\Matthias\data\imaging\widefield', ...
 %     settings.mouseName, folderName);
-settings.saveDir = fullfile('E:\Data\Shin\', ...
+settings.saveDir = fullfile('E:\Data\Dan\', ...
     settings.mouseName, folderName);
 clipboard('copy', fullfile(settings.saveDir, 'mov'));
 if ~exist(settings.saveDir, 'dir')
@@ -32,8 +32,8 @@ settings.barWidth_deg = 12.5; % Marshel uses 20
 settings.barSpeed_dps = 10; % Marshel uses 8.5-9.5 dps
 settings.checkerWidth_deg = 1/0.08;
 settings.checkerBlink_hz = 3; % Marshel uses 6 Hz
-settings.minDistEyeToScreen_mm = 140;
-settings.screenOri_xyPix = [-20, 250];
+settings.minDistEyeToScreen_mm = 165;
+settings.screenOri_xyPix = [7, 250];
 settings.pixelReductionFactor = 5; % How much the texture is downsampled...affects frame rate.
 settings.fpsStim = 60; % Target display/acquisition rate. Max is 120 Hz (monitor refresh)
 settings.camFrameStride = 1; % The camera takes one picture every this many frames.
