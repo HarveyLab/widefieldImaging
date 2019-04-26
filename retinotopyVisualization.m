@@ -4,10 +4,10 @@ switch getComputerName
     case 'shin-pc'
         pBase = '\\research.files.med.harvard.edu\Neurobio\HarveyLab\Tier1\Shin\ShinDataAll\Widefield';
     otherwise
-        pBase = 'E:\Data\Dan';
+        pBase = 'E:\Data\Shin';
 end
 
-mouse = 'DW30';
+mouse = 'NN001';
 
 ls = dir(fullfile(pBase, mouse, [mouse '_*']));
 ls = ls([ls.isdir]);
