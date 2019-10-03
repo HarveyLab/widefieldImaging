@@ -2,17 +2,35 @@
 
 switch getComputerName
     case 'shin-pc'
-        pBase = '\\research.files.med.harvard.edu\Neurobio\HarveyLab\Tier1\Shin\ShinDataAll\Widefield';
+        % pBase = '\\research.files.med.harvard.edu\Neurobio\HarveyLab\Tier1\Shin\ShinDataAll\Widefield';
+        % pBase = '\\research.files.med.harvard.edu\Neurobio\HarveyLab\Tier2\Shin\ShinDataAll\Widefield2';
+        pBase = 'E:\Widefield';
     otherwise
         pBase = 'E:\Data\Shin';
 end
 
-mouse = 'NN001';
+mouse_num = 15;
+mouse = getMouseID(mouse_num);
+% mouse = 'NN001';
 
-ls = dir(fullfile(pBase, mouse, [mouse '_*']));
+switch mouse_num
+    case 9
+        
+    case 15
+        % poor quality due to granulation growth
+        date_num = 170616;
+    case 20
+        date_num = 170125;
+    case 31
+end
+
+
+% ls = dir(fullfile(pBase, sprintf('%s_%d',mouse,date_num), ['*_',mouse,'_*']));
+ls = dir(fullfile(pBase, mouse, [mouse '_' num2str(date_num) '_ret*']));
 ls = ls([ls.isdir]);
 
 % Take most recent version of all files:
+pAcq = fullfile(pBase, mouse, ls(end).name);
 pAcq = fullfile(pBase, mouse, ls(end).name); 
 lsDat = dir(fullfile(pAcq, ['*' mouse '.mat']));
 lsResult = dir(fullfile(pAcq, ['*' mouse '*_results*.mat']));
