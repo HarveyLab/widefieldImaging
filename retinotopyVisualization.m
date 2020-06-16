@@ -9,7 +9,7 @@ switch getComputerName
         pBase = 'E:\Data\Shin';
 end
 
-mouse_num = 15;
+mouse_num = 20;
 mouse = getMouseID(mouse_num);
 % mouse = 'NN001';
 
@@ -147,12 +147,23 @@ title('Combined power')
 
 meanVertiGrad = wrapToPi((angle(results(1).fft)+angle(results(3).fft))/2);
 meanHoriGrad = wrapToPi((angle(results(2).fft)+angle(results(4).fft))/2);
-
+%%
 subplot(2, 3, 6);
-[~, Gdir1] = imgradient(meanVertiGrad);
-[~, Gdir2] = imgradient(meanHoriGrad);
-fieldSign = sind(Gdir1 - Gdir2);
-fs = imgaussfilt(fieldSign, 6);
+if 1
+    [~, Gdir1] = imgradient(meanVertiGrad);
+    [~, Gdir2] = imgradient(meanHoriGrad);
+    fieldSign = sind(Gdir1 - Gdir2);
+    fs = imgaussfilt(fieldSign, 6);
+else
+    meanVertiGrad_smooth = imgaussfilt(meanVertiGrad, 6);
+    meanHoriGrad_smooth  = imgaussfilt(meanHoriGrad, 6);
+    
+    [~, Gdir1] = imgradient(meanVertiGrad_smooth);
+    [~, Gdir2] = imgradient(meanHoriGrad_smooth);
+    fieldSign = sind(Gdir1 - Gdir2);
+    fs = imgaussfilt(fieldSign, 6);
+end
+    
 imagesc(fs, [-1 1])
 colormap(gca, jet)
 title('Field sign')
