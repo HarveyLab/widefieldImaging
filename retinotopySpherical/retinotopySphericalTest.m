@@ -1,4 +1,4 @@
-function retinotopySpherical
+function retinotopySphericalTest
 % error('get timing prediction right')
 % error('Cover left eye!')
 % error('Ensure that right eye can only see screen, no reflections')
@@ -8,7 +8,9 @@ function retinotopySpherical
 %% User settings:
 isDebug = true;
 settings = struct;
-settings.mouseName = char(inputdlg('Enter mouse name:'));
+% settings.mouseName = char(inputdlg('Enter mouse name:'));
+settings.mouseName = '999';
+
 
 % Tested saving video directly to server. It works.
 % settings.saveDir = 'D:\Data\Matthias';
@@ -49,11 +51,11 @@ screenHeightDegTheoretical = 104.5;
 expDur = settings.nRepeats * ...
     4 * ... % Number of conditions/bar directions
     (screenWidthDegTheoretical+screenHeightDegTheoretical)*0.5/settings.barSpeed_dps;
-button = questdlg(sprintf('Experiment will take about %1.1f minutes. Start video recording (dir is in clipboard), then click YES to start.', ...
-    expDur/60));
-if ~strcmp(button, 'Yes')
-    return
-end
+% button = questdlg(sprintf('Experiment will take about %1.1f minutes. Start video recording (dir is in clipboard), then click YES to start.', ...
+%     expDur/60));
+% if ~strcmp(button, 'Yes')
+%     return
+% end
 
 %% Run this to find the screen origin:
 if 0
@@ -139,8 +141,8 @@ else
     Screen('FillRect', screen.win, 127)
 end
 Screen('Flip', screen.win);
-outputSingleScan(camControl,[1 1 0]) %LEDs on
-pause(5); % For luminance adaptation.
+% outputSingleScan(camControl,[1 1 0]) %LEDs on
+% pause(5); % For luminance adaptation.
 
 %% Display and Acquisition Loop
 
